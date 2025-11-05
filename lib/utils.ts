@@ -1,0 +1,23 @@
+export function relativeTimeFrom(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const sec = Math.floor(diffMs / 1000);
+  if (sec < 60) return `${sec}s ago`;
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.floor(hr / 24);
+  if (day < 30) return `${day}d ago`;
+  const mon = Math.floor(day / 30);
+  if (mon < 12) return `${mon}mo ago`;
+  const yr = Math.floor(mon / 12);
+  return `${yr}y ago`;
+}
+
+export function firstChars(text: string, length = 60): string {
+  if (text.length <= length) return text;
+  return text.slice(0, length) + "…";
+}
+
+

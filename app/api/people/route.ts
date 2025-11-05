@@ -1,0 +1,29 @@
+import { NextResponse } from "next/server";
+import { getServerSessionOrMock } from "@/lib/serverAuth";
+import { prisma } from "@/lib/prisma";
+import { isMockAuthEnabled } from "@/lib/mockFlags";
+
+export async function POST(req: Request) {
+  const session = await getServerSessionOrMock();
+  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const body = await req.json();
+  const { name, photoUrl } = body as { name: string; photoUrl?: string };
+  if (!name) return NextResponse.json({ error: "Name required" }, { status: 400 });
+
+  if (isMockAuthEnabled()) {
+    return NextResponse.json({ id: "mock-person", name, photoUrl, userId: "u1" });
+  }
+
+  const user = await prisma.user.upsert({
+    where: { email: session.user.email },
+    update: {},
+    create: { email: session.user.email, name: session.user.name ?? null },
+  });
+
+  const person = await prisma.person.create({
+    data: { name, photoUrl, userId: user.id },
+  });
+  return NextResponse.json(person);
+}
+
+
