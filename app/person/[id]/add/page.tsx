@@ -2,10 +2,10 @@
 
 import * as React from 'react'
 import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import {useParams, useRouter} from "next/navigation";
 
-export default function AddConversation({ params } ) {
-    const { id } = React.use(params)
+export default function AddConversation() {
+    const {id} = useParams()
   const router = useRouter();
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
@@ -13,7 +13,7 @@ export default function AddConversation({ params } ) {
   const [listening, setListening] = useState(false);
 
   function startListening() {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition = (window as any).SpeechRecognition;
     if (!SpeechRecognition) return;
     const recognition: SpeechRecognition = new SpeechRecognition();
     recognition.continuous = true;

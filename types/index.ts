@@ -1,7 +1,7 @@
 export interface Person {
   id: string;
   name: string;
-  photoUrl?: string;
+  photoUrl?: string | null;
   userId: string;
   createdAt: Date;
   updatedAt: Date;

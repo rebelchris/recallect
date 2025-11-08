@@ -4,7 +4,6 @@ import { getServerSessionOrMock } from "@/lib/serverAuth";
 import { prisma } from "@/lib/prisma";
 import { firstChars, relativeTimeFrom } from "@/lib/utils";
 import type { Person, Conversation } from "@/types";
-import { isMockAuthEnabled } from "@/lib/mockFlags";
 
 export default async function Home() {
   const session = await getServerSessionOrMock();
@@ -18,9 +17,7 @@ export default async function Home() {
     );
   }
 
-  let people: (Person & { conversations: Conversation[]; _count: { conversations: number } })[] = [];
-  try {
-    people = await prisma.person.findMany({
+    const people = await prisma.person.findMany({
       where: { user: { email: session.user.email } },
       include: {
         conversations: { orderBy: { timestamp: "desc" }, take: 1 },
@@ -31,44 +28,6 @@ export default async function Home() {
         { updatedAt: "desc" },
       ],
     });
-  } catch (e) {
-    if (isMockAuthEnabled()) {
-      const now = new Date();
-      people = [
-        {
-          id: "p1",
-          name: "Alex Johnson",
-          photoUrl: undefined,
-          userId: "u1",
-          createdAt: now,
-          updatedAt: now,
-          conversations: [
-            {
-              id: "c1",
-              content: "Talked about their new job and weekend plans at the park.",
-              timestamp: new Date(now.getTime() - 1000 * 60 * 60 * 5),
-              personId: "p1",
-              createdAt: now,
-              updatedAt: now,
-            },
-          ],
-          _count: { conversations: 1 },
-        },
-        {
-          id: "p2",
-          name: "Sam Lee",
-          photoUrl: undefined,
-          userId: "u1",
-          createdAt: now,
-          updatedAt: now,
-          conversations: [],
-          _count: { conversations: 0 },
-        },
-      ];
-    } else {
-      throw e;
-    }
-  }
 
   return (
     <ProtectedRoute>
@@ -80,7 +39,7 @@ export default async function Home() {
           <div className="mt-24 text-center text-gray-500">Add your first friend to start remembering</div>
         ) : (
           <ul className="space-y-3">
-            {people.map((p: Person & { conversations: Conversation[]; _count: { conversations: number } }) => {
+            {people.map((p: Person) => {
               const last = p.conversations?.[0];
               return (
                 <li key={p.id} className="rounded-xl bg-white p-4 shadow">
