@@ -1,25 +1,12 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { relativeTimeFrom } from "@/lib/utils";
-import { isMockAuthEnabled } from "@/lib/mockAuth";
-import {authClient} from "@/lib/auth-client";
-import {auth} from "@/lib/auth";
-import {headers} from "next/headers";
 
 export default async function PersonDetail({ params }: { params: { id: string } }) {
     const {id} = await params;
-    const session = await auth.api.getSession({
-        headers: await headers() // you need to pass the headers object.
-    })
-    console.log(session)
-
-
-    let person = await prisma.person.findUnique({
+    const person = await prisma.person.findUnique({
     where: { id },
     include: { conversations: { orderBy: { timestamp: "desc" } } },
-  }).catch((e) => {
-    if (isMockAuthEnabled()) return null;
-    throw e;
   });
 
   if (!person) return <div className="p-4">Not found</div>;
