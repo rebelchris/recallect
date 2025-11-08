@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { relativeTimeFrom } from "@/lib/utils";
+import {Conversation} from "@/types";
 
 export default async function PersonDetail({ params }: { params: { id: string } }) {
     const {id} = await params;
@@ -23,7 +24,7 @@ export default async function PersonDetail({ params }: { params: { id: string } 
         You’ve had {person.conversations.length} conversations • Last talked: {person.conversations[0] ? relativeTimeFrom(person.conversations[0].timestamp) : "—"}
       </div>
       <ul className="space-y-3">
-        {person.conversations.map((c) => (
+        {person.conversations.map((c: Conversation) => (
           <li key={c.id} className="rounded-xl bg-white p-4 shadow">
             <div className="mb-1 text-xs text-gray-500">{relativeTimeFrom(c.timestamp)}</div>
             <div className="whitespace-pre-wrap text-sm">{c.content}</div>
