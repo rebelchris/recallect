@@ -21,13 +21,13 @@ export default function GroupFilter({
   };
 
   return (
-    <div className="no-scrollbar -mx-4 flex gap-2 overflow-x-auto px-4">
+    <div className="no-scrollbar -mx-6 flex gap-2 overflow-x-auto px-6 py-1">
       <button
         onClick={() => handleGroupChange("ALL")}
-        className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+        className={`whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold shadow-sm transition-all ${
           selectedGroupId === "ALL"
-            ? "bg-[#FF6B6B] text-white"
-            : "bg-white text-gray-700 hover:bg-gray-100"
+            ? "bg-[#FF6B6B] text-white shadow-md"
+            : "bg-white text-gray-700 hover:bg-gray-50 hover:shadow"
         }`}
       >
         All
@@ -36,10 +36,10 @@ export default function GroupFilter({
         <button
           key={group.id}
           onClick={() => handleGroupChange(group.id)}
-          className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+          className={`whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold shadow-sm transition-all ${
             selectedGroupId === group.id
-              ? "text-white"
-              : "bg-white text-gray-700"
+              ? "text-white shadow-md"
+              : "bg-white text-gray-700 hover:shadow"
           }`}
           style={
             selectedGroupId === group.id
