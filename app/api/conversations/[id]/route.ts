@@ -14,22 +14,32 @@ export async function GET(
   const { id } = await params;
 
   if (isMockAuthEnabled()) {
-    return NextResponse.json({ id, name: "Mock Person", userId: "u1" });
+    return NextResponse.json({
+      id,
+      content: "Mock conversation",
+      timestamp: new Date().toISOString(),
+      personId: "mock-person",
+    });
   }
 
-  const person = await prisma.person.findFirst({
+  const conversation = await prisma.conversation.findFirst({
     where: {
       id,
-      user: { email: session.user.email },
+      person: {
+        user: { email: session.user.email },
+      },
     },
-    include: { group: true },
+    include: {
+      person: true,
+      reminders: true,
+    },
   });
 
-  if (!person) {
+  if (!conversation) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  return NextResponse.json(person);
+  return NextResponse.json(conversation);
 }
 
 export async function PATCH(
@@ -42,39 +52,42 @@ export async function PATCH(
 
   const { id } = await params;
   const body = await req.json();
-  const { name, photoUrl, groupId } = body as {
-    name?: string;
-    photoUrl?: string;
-    groupId?: string | null;
+  const { content, timestamp } = body as {
+    content?: string;
+    timestamp?: string;
   };
 
   if (isMockAuthEnabled()) {
-    return NextResponse.json({ id, name, photoUrl, groupId, userId: "u1" });
+    return NextResponse.json({ id, content, timestamp });
   }
 
-  // Verify the person belongs to the current user
-  const existingPerson = await prisma.person.findFirst({
+  // Verify the conversation belongs to the current user
+  const existingConversation = await prisma.conversation.findFirst({
     where: {
       id,
-      user: { email: session.user.email },
+      person: {
+        user: { email: session.user.email },
+      },
     },
   });
 
-  if (!existingPerson) {
+  if (!existingConversation) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const person = await prisma.person.update({
+  const conversation = await prisma.conversation.update({
     where: { id },
     data: {
-      ...(name !== undefined && { name }),
-      ...(photoUrl !== undefined && { photoUrl }),
-      ...(groupId !== undefined && { groupId }),
+      ...(content !== undefined && { content }),
+      ...(timestamp !== undefined && { timestamp: new Date(timestamp) }),
     },
-    include: { group: true },
+    include: {
+      person: true,
+      reminders: true,
+    },
   });
 
-  return NextResponse.json(person);
+  return NextResponse.json(conversation);
 }
 
 export async function DELETE(
@@ -91,20 +104,21 @@ export async function DELETE(
     return NextResponse.json({ success: true });
   }
 
-  // Verify the person belongs to the current user
-  const existingPerson = await prisma.person.findFirst({
+  // Verify the conversation belongs to the current user
+  const existingConversation = await prisma.conversation.findFirst({
     where: {
       id,
-      user: { email: session.user.email },
+      person: {
+        user: { email: session.user.email },
+      },
     },
   });
 
-  if (!existingPerson) {
+  if (!existingConversation) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Delete the person (cascades to conversations and reminders)
-  await prisma.person.delete({
+  await prisma.conversation.delete({
     where: { id },
   });
 
