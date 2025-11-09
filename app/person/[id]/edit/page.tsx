@@ -70,50 +70,59 @@ export default function EditPersonPage() {
 
   if (loading) {
     return (
-      <main className="mx-auto max-w-md p-4">
-        <div className="text-center text-gray-500">Loading...</div>
+      <main className="mx-auto max-w-md p-6">
+        <div className="py-12 text-center text-gray-500">Loading...</div>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto max-w-md p-4">
-      <div className="mb-3 flex items-center gap-2">
-        <Link href={`/person/${id}`} className="rounded-md px-2 py-1 text-sm text-[#FF6B6B]">
+    <main className="mx-auto max-w-md p-6">
+      <div className="mb-6 flex items-center gap-3">
+        <Link href={`/person/${id}`} className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-[#FF6B6B] transition-colors hover:bg-red-50">
           ← Cancel
         </Link>
-        <h1 className="text-xl font-semibold">Edit Person</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Edit Person</h1>
       </div>
-      <form onSubmit={onSubmit} className="space-y-3">
-        <input
-          required
-          placeholder="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className="w-full rounded-md border border-gray-200 p-3 outline-none focus:border-[#FF8C42]"
-        />
-        <input
-          placeholder="Photo URL (optional)"
-          value={photoUrl}
-          onChange={(e) => setPhotoUrl(e.target.value)}
-          className="w-full rounded-md border border-gray-200 p-3 outline-none focus:border-[#FF8C42]"
-        />
-        <select
-          value={groupId}
-          onChange={(e) => setGroupId(e.target.value)}
-          className="w-full rounded-md border border-gray-200 p-3 outline-none focus:border-[#FF8C42]"
-        >
-          <option value="">No group</option>
-          {groups.map((group) => (
-            <option key={group.id} value={group.id}>
-              {group.name}
-            </option>
-          ))}
-        </select>
+      <form onSubmit={onSubmit} className="space-y-4">
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">Name</label>
+          <input
+            required
+            placeholder="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-3.5 text-base outline-none transition-colors focus:border-[#FF8C42] focus:bg-white focus:shadow-sm"
+          />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">Photo URL (optional)</label>
+          <input
+            placeholder="https://example.com/photo.jpg"
+            value={photoUrl}
+            onChange={(e) => setPhotoUrl(e.target.value)}
+            className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-3.5 text-base outline-none transition-colors focus:border-[#FF8C42] focus:bg-white focus:shadow-sm"
+          />
+        </div>
+        <div>
+          <label className="mb-1.5 block text-sm font-medium text-gray-700">Group</label>
+          <select
+            value={groupId}
+            onChange={(e) => setGroupId(e.target.value)}
+            className="w-full rounded-xl border border-gray-200 bg-gray-50/50 p-3.5 text-base outline-none transition-colors focus:border-[#FF8C42] focus:bg-white focus:shadow-sm"
+          >
+            <option value="">No group</option>
+            {groups.map((group) => (
+              <option key={group.id} value={group.id}>
+                {group.name}
+              </option>
+            ))}
+          </select>
+        </div>
         <button
           type="submit"
           disabled={!name || saving}
-          className="w-full rounded-md bg-[#FF6B6B] p-3 font-medium text-white disabled:opacity-60"
+          className="w-full rounded-xl bg-[#FF6B6B] p-3.5 font-semibold text-white shadow-sm transition-all hover:bg-[#FF5555] hover:shadow disabled:opacity-60"
         >
           {saving ? "Saving…" : "Save Changes"}
         </button>
