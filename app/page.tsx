@@ -58,6 +58,26 @@ export default async function Home({
     ],
   });
 
+  const user = await prisma.user.findUnique({
+    where: { email: session.user.email },
+  });
+
+  const upcomingReminders = user
+    ? await prisma.reminder.findMany({
+        where: {
+          userId: user.id,
+          status: "PENDING",
+          remindAt: { gte: new Date() },
+        },
+        include: {
+          person: true,
+          conversation: true,
+        },
+        orderBy: { remindAt: "asc" },
+        take: 5,
+      })
+    : [];
+
   return (
     <ProtectedRoute>
       <main className="mx-auto max-w-md p-4 pb-24">
@@ -68,6 +88,40 @@ export default async function Home({
             <SearchBar initialSearch={search} groupId={groupId} />
           </div>
         </div>
+
+        {/* Upcoming Reminders */}
+        {upcomingReminders.length > 0 && (
+          <div className="mb-6">
+            <h2 className="mb-3 text-lg font-semibold">Upcoming Reminders</h2>
+            <ul className="space-y-2">
+              {upcomingReminders.map((reminder) => (
+                <li
+                  key={reminder.id}
+                  className="rounded-xl border-2 border-[#FF8C42] bg-white p-3 shadow"
+                >
+                  <Link href={`/person/${reminder.personId}`}>
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="font-medium">{reminder.person.name}</div>
+                        <div className="mt-1 text-sm text-gray-600">
+                          {firstChars(reminder.conversation.content, 80)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="mt-2 text-xs text-[#FF6B6B]">
+                      Remind on: {new Date(reminder.remindAt).toLocaleDateString()} at{" "}
+                      {new Date(reminder.remindAt).toLocaleTimeString([], {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </div>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {people.length === 0 ? (
           <div className="mt-24 text-center text-gray-500">
             {search

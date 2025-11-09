@@ -11,6 +11,8 @@ export default function AddConversation() {
   const [saving, setSaving] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const [listening, setListening] = useState(false);
+  const [setReminder, setSetReminder] = useState(false);
+  const [reminderDate, setReminderDate] = useState("");
 
   function startListening() {
     const SpeechRecognition = (window as any).SpeechRecognition;
@@ -38,14 +40,37 @@ export default function AddConversation() {
     setListening(false);
   }
 
+  function setQuickReminder(days: number) {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    setReminderDate(date.toISOString().slice(0, 16));
+  }
+
   async function onSave() {
     setSaving(true);
     try {
-      await fetch("/api/conversations", {
+      // Create the conversation
+      const response = await fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ personId: id, content }),
       });
+
+      const conversation = await response.json();
+
+      // Create the reminder if enabled
+      if (setReminder && reminderDate && conversation.id) {
+        await fetch("/api/reminders", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            conversationId: conversation.id,
+            personId: id,
+            remindAt: reminderDate,
+          }),
+        });
+      }
+
       router.replace(`/person/${id}`);
     } finally {
       setSaving(false);
@@ -61,6 +86,60 @@ export default function AddConversation() {
         placeholder="What did you talk about?"
         className="h-48 w-full resize-none rounded-lg border border-gray-200 p-3 outline-none focus:border-[#FF8C42]"
       />
+
+      {/* Reminder Section */}
+      <div className="mt-4 rounded-lg border border-gray-200 p-3">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={setReminder}
+            onChange={(e) => setSetReminder(e.target.checked)}
+            className="h-4 w-4 rounded border-gray-300 text-[#FF6B6B] focus:ring-[#FF6B6B]"
+          />
+          <span className="font-medium">Remind me about this</span>
+        </label>
+
+        {setReminder && (
+          <div className="mt-3 space-y-3">
+            <div className="flex flex-wrap gap-2">
+              <button
+                onClick={() => setQuickReminder(7)}
+                className="rounded-md border border-gray-200 px-3 py-1 text-sm hover:bg-gray-50"
+              >
+                In 1 week
+              </button>
+              <button
+                onClick={() => setQuickReminder(14)}
+                className="rounded-md border border-gray-200 px-3 py-1 text-sm hover:bg-gray-50"
+              >
+                In 2 weeks
+              </button>
+              <button
+                onClick={() => setQuickReminder(21)}
+                className="rounded-md border border-gray-200 px-3 py-1 text-sm hover:bg-gray-50"
+              >
+                In 3 weeks
+              </button>
+              <button
+                onClick={() => setQuickReminder(30)}
+                className="rounded-md border border-gray-200 px-3 py-1 text-sm hover:bg-gray-50"
+              >
+                In 1 month
+              </button>
+            </div>
+            <div>
+              <label className="text-sm text-gray-600">Or pick a specific date:</label>
+              <input
+                type="datetime-local"
+                value={reminderDate}
+                onChange={(e) => setReminderDate(e.target.value)}
+                className="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 outline-none focus:border-[#FF8C42]"
+              />
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="mt-3 flex items-center gap-2">
         {!listening ? (
           <button onClick={startListening} className="rounded-md border border-gray-200 px-3 py-2">
@@ -73,7 +152,7 @@ export default function AddConversation() {
         )}
         <button
           onClick={onSave}
-          disabled={!content || saving}
+          disabled={!content || saving || (setReminder && !reminderDate)}
           className="rounded-md bg-[#FF6B6B] px-4 py-2 text-white disabled:opacity-60"
         >
           {saving ? "Saving…" : "Save"}

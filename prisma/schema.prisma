@@ -14,17 +14,18 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
+  id            String     @id @default(cuid())
   name          String?
-  email         String?   @unique
+  email         String?    @unique
   emailVerified Boolean?
   image         String?
   accounts      Account[]
   sessions      Session[]
   people        Person[]
   groups        Group[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @default(now()) @updatedAt
+  reminders     Reminder[]
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @default(now()) @updatedAt
 
   @@map("user")
 }
@@ -106,6 +107,7 @@ model Person {
   userId        String
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   conversations Conversation[]
+  reminders     Reminder[]
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
 
@@ -114,16 +116,41 @@ model Person {
 }
 
 model Conversation {
-  id        String   @id @default(cuid())
-  content   String   @db.Text
-  timestamp DateTime @default(now())
+  id        String     @id @default(cuid())
+  content   String     @db.Text
+  timestamp DateTime   @default(now())
   personId  String
-  person    Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  person    Person     @relation(fields: [personId], references: [id], onDelete: Cascade)
+  reminders Reminder[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
   @@index([personId])
   @@index([timestamp])
+}
+
+enum ReminderStatus {
+  PENDING
+  SENT
+  DISMISSED
+}
+
+model Reminder {
+  id             String         @id @default(cuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  personId       String
+  person         Person         @relation(fields: [personId], references: [id], onDelete: Cascade)
+  conversationId String
+  conversation   Conversation   @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  remindAt       DateTime
+  status         ReminderStatus @default(PENDING)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([userId])
+  @@index([remindAt])
+  @@index([status])
 }
 
 model Verification {
