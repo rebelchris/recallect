@@ -10,17 +10,21 @@ export default function AddConversation() {
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const shouldStopRef = useRef(false);
   const [listening, setListening] = useState(false);
   const [setReminder, setSetReminder] = useState(false);
   const [reminderDate, setReminderDate] = useState("");
 
   function startListening() {
-    const SpeechRecognition = (window as any).SpeechRecognition;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) return;
+
+    shouldStopRef.current = false;
     const recognition: SpeechRecognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-US";
+
     recognition.onresult = (e: SpeechRecognitionEvent) => {
       let finalTranscript = "";
 
@@ -36,14 +40,32 @@ export default function AddConversation() {
         setContent((prev) => (prev ? prev + " " : "") + finalTranscript.trim());
       }
     };
-    recognition.onend = () => setListening(false);
-    recognition.onerror = () => setListening(false);
+
+    recognition.onend = () => {
+      // Only stop if user manually stopped, otherwise restart
+      if (shouldStopRef.current) {
+        setListening(false);
+      } else {
+        // Auto-restart if it stopped unexpectedly
+        recognition.start();
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      // Only stop on actual errors, not on aborted/no-speech
+      if (event.error === 'aborted' || event.error === 'no-speech') {
+        return;
+      }
+      setListening(false);
+    };
+
     recognition.start();
     recognitionRef.current = recognition;
     setListening(true);
   }
 
   function stopListening() {
+    shouldStopRef.current = true;
     recognitionRef.current?.stop();
     setListening(false);
   }
