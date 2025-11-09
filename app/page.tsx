@@ -1,4 +1,5 @@
 import ProtectedRoute from "@/components/ProtectedRoute";
+import PullToRefresh from "@/components/PullToRefresh";
 import Link from "next/link";
 import { getServerSessionOrMock } from "@/lib/serverAuth";
 import { prisma } from "@/lib/prisma";
@@ -80,7 +81,8 @@ export default async function Home({
 
   return (
     <ProtectedRoute>
-      <main className="mx-auto max-w-md p-6 pb-24">
+      <PullToRefresh>
+        <main className="mx-auto max-w-md p-6 pb-24">
         <div className="sticky top-0 z-10 -mx-6 mb-6 bg-[#FAFAFA] px-6 pb-4 pt-2">
           <h1 className="mb-4 text-2xl font-bold tracking-tight">People</h1>
           <GroupFilter groups={groups} selectedGroupId={groupId || "ALL"} />
@@ -183,6 +185,7 @@ export default async function Home({
           </ul>
         )}
       </main>
+      </PullToRefresh>
     </ProtectedRoute>
   );
 }

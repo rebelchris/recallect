@@ -101,7 +101,8 @@ export default function AddConversation() {
         });
       }
 
-      router.replace(`/person/${id}`);
+      // Use back() to return to the previous page, which will trigger a fresh fetch
+      router.back();
     } finally {
       setSaving(false);
     }
