@@ -5,11 +5,12 @@ import { prisma } from "@/lib/prisma";
 import { firstChars, relativeTimeFrom } from "@/lib/utils";
 import type { Person, Conversation } from "@/types";
 import GroupFilter from "./GroupFilter";
+import SearchBar from "./SearchBar";
 
 export default async function Home({
   searchParams,
 }: {
-  searchParams: Promise<{ groupId?: string }>;
+  searchParams: Promise<{ groupId?: string; search?: string }>;
 }) {
   const session = await getServerSessionOrMock();
   if (!session?.user?.email) {
@@ -22,7 +23,7 @@ export default async function Home({
     );
   }
 
-  const { groupId } = await searchParams;
+  const { groupId, search } = await searchParams;
 
   const groups = await prisma.group.findMany({
     where: { userId: null },
@@ -33,6 +34,18 @@ export default async function Home({
     where: {
       user: { email: session.user.email },
       ...(groupId && groupId !== "ALL" && { groupId }),
+      ...(search && {
+        OR: [
+          { name: { contains: search, mode: "insensitive" } },
+          {
+            conversations: {
+              some: {
+                content: { contains: search, mode: "insensitive" },
+              },
+            },
+          },
+        ],
+      }),
     },
     include: {
       group: true,
@@ -51,12 +64,17 @@ export default async function Home({
         <div className="sticky top-0 z-10 mb-4 bg-[#FAFAFA] pb-2 pt-1">
           <h1 className="mb-3 text-xl font-semibold">People</h1>
           <GroupFilter groups={groups} selectedGroupId={groupId || "ALL"} />
+          <div className="mt-3">
+            <SearchBar initialSearch={search} groupId={groupId} />
+          </div>
         </div>
         {people.length === 0 ? (
           <div className="mt-24 text-center text-gray-500">
-            {groupId && groupId !== "ALL"
-              ? `No people in this group`
-              : "Add your first friend to start remembering"}
+            {search
+              ? "No results found"
+              : groupId && groupId !== "ALL"
+                ? "No people in this group"
+                : "Add your first friend to start remembering"}
           </div>
         ) : (
           <ul className="space-y-3">
