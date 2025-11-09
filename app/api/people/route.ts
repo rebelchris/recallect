@@ -3,6 +3,26 @@ import { getServerSessionOrMock } from "@/lib/serverAuth";
 import { prisma } from "@/lib/prisma";
 import { isMockAuthEnabled } from "@/lib/mockFlags";
 
+export async function GET() {
+  const session = await getServerSessionOrMock();
+  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  if (isMockAuthEnabled()) {
+    return NextResponse.json([
+      { id: "p1", name: "Alice", userId: "u1" },
+      { id: "p2", name: "Bob", userId: "u1" },
+    ]);
+  }
+
+  const people = await prisma.person.findMany({
+    where: { user: { email: session.user.email } },
+    include: { group: true },
+    orderBy: { name: "asc" },
+  });
+
+  return NextResponse.json(people);
+}
+
 export async function POST(req: Request) {
   const session = await getServerSessionOrMock();
   if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
