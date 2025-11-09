@@ -167,8 +167,8 @@ export default function QuickAddModal({ isOpen, onClose }: QuickAddModalProps) {
     <dialog
       ref={dialogRef}
       onClose={handleClose}
-      className="rounded-2xl bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
-      style={{ width: "min(90vw, 400px)", maxHeight: "80vh" }}
+      className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-white p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
+      style={{ width: "min(90vw, 400px)", maxHeight: "80vh", margin: 0 }}
     >
       <div className="flex flex-col">
         {/* Header */}
