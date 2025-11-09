@@ -1,16 +1,16 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { relativeTimeFrom } from "@/lib/utils";
 import type { Person, Conversation, Reminder } from "@/types";
 import ReminderItem from "@/components/ReminderItem";
 import ConversationItem from "@/components/ConversationItem";
 import EditConversationModal from "@/components/EditConversationModal";
 
-export default function PersonDetail({ params }: { params: { id: string } }) {
-  const router = useRouter();
+export default function PersonDetail() {
+  const params = useParams();
   const [person, setPerson] = useState<Person | null>(null);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);

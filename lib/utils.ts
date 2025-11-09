@@ -1,6 +1,7 @@
-export function relativeTimeFrom(date: Date): string {
+export function relativeTimeFrom(date: Date | string): string {
   const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  const diffMs = now.getTime() - dateObj.getTime();
   const sec = Math.floor(diffMs / 1000);
   if (sec < 60) return `${sec}s ago`;
   const min = Math.floor(sec / 60);

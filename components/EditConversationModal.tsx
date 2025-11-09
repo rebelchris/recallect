@@ -75,7 +75,7 @@ export default function EditConversationModal({
     <dialog
       ref={dialogRef}
       onClose={handleClose}
-      className="rounded-xl p-0 backdrop:bg-black/50 w-full max-w-md"
+      className="rounded-xl p-0 backdrop:bg-black/50 w-full max-w-md m-auto"
     >
       <div className="bg-white rounded-xl">
         {/* Header */}
