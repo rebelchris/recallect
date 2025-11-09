@@ -1,7 +1,18 @@
+export interface Group {
+  id: string;
+  name: string;
+  color?: string | null;
+  userId?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface Person {
   id: string;
   name: string;
   photoUrl?: string | null;
+  groupId?: string | null;
+  group?: Group | null;
   userId: string;
   createdAt: Date;
   updatedAt: Date;

@@ -4,8 +4,13 @@ import { getServerSessionOrMock } from "@/lib/serverAuth";
 import { prisma } from "@/lib/prisma";
 import { firstChars, relativeTimeFrom } from "@/lib/utils";
 import type { Person, Conversation } from "@/types";
+import GroupFilter from "./GroupFilter";
 
-export default async function Home() {
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ groupId?: string }>;
+}) {
   const session = await getServerSessionOrMock();
   if (!session?.user?.email) {
     return (
@@ -17,26 +22,42 @@ export default async function Home() {
     );
   }
 
-    const people = await prisma.person.findMany({
-      where: { user: { email: session.user.email } },
-      include: {
-        conversations: { orderBy: { timestamp: "desc" }, take: 1 },
-        _count: { select: { conversations: true } },
-      },
-      orderBy: [
-        { conversations: { _count: "desc" } },
-        { updatedAt: "desc" },
-      ],
-    });
+  const { groupId } = await searchParams;
+
+  const groups = await prisma.group.findMany({
+    where: { userId: null },
+    orderBy: { name: "asc" },
+  });
+
+  const people = await prisma.person.findMany({
+    where: {
+      user: { email: session.user.email },
+      ...(groupId && groupId !== "ALL" && { groupId }),
+    },
+    include: {
+      group: true,
+      conversations: { orderBy: { timestamp: "desc" }, take: 1 },
+      _count: { select: { conversations: true } },
+    },
+    orderBy: [
+      { conversations: { _count: "desc" } },
+      { updatedAt: "desc" },
+    ],
+  });
 
   return (
     <ProtectedRoute>
       <main className="mx-auto max-w-md p-4 pb-24">
         <div className="sticky top-0 z-10 mb-4 bg-[#FAFAFA] pb-2 pt-1">
-          <h1 className="text-xl font-semibold">People</h1>
+          <h1 className="mb-3 text-xl font-semibold">People</h1>
+          <GroupFilter groups={groups} selectedGroupId={groupId || "ALL"} />
         </div>
         {people.length === 0 ? (
-          <div className="mt-24 text-center text-gray-500">Add your first friend to start remembering</div>
+          <div className="mt-24 text-center text-gray-500">
+            {groupId && groupId !== "ALL"
+              ? `No people in this group`
+              : "Add your first friend to start remembering"}
+          </div>
         ) : (
           <ul className="space-y-3">
             {people.map((p: Person) => {

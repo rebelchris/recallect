@@ -22,6 +22,7 @@ model User {
   accounts      Account[]
   sessions      Session[]
   people        Person[]
+  groups        Group[]
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @default(now()) @updatedAt
 
@@ -83,10 +84,25 @@ model VerificationToken {
   @@unique([identifier, token])
 }
 
+model Group {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  color     String?
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  people    Person[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
 model Person {
   id            String         @id @default(cuid())
   name          String
   photoUrl      String?
+  groupId       String?
+  group         Group?         @relation(fields: [groupId], references: [id], onDelete: SetNull)
   userId        String
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   conversations Conversation[]
@@ -94,6 +110,7 @@ model Person {
   updatedAt     DateTime       @updatedAt
 
   @@index([userId])
+  @@index([groupId])
 }
 
 model Conversation {

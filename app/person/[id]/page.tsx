@@ -14,14 +14,22 @@ export default async function PersonDetail({ params }: { params: { id: string } 
 
   return (
     <main className="mx-auto max-w-md p-4 pb-24">
-      <div className="mb-3 flex items-center gap-2">
-        <Link href="/" className="rounded-md px-2 py-1 text-sm text-[#FF6B6B]">
-          ← Back
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Link href="/" className="rounded-md px-2 py-1 text-sm text-[#FF6B6B]">
+            ← Back
+          </Link>
+          <h1 className="text-xl font-semibold">{person.name}</h1>
+        </div>
+        <Link
+          href={`/person/${person.id}/edit`}
+          className="rounded-md bg-gray-100 px-3 py-1 text-sm text-gray-700 hover:bg-gray-200"
+        >
+          Edit
         </Link>
-        <h1 className="text-xl font-semibold">{person.name}</h1>
       </div>
       <div className="mb-4 text-sm text-gray-600">
-        You’ve had {person.conversations.length} conversations • Last talked: {person.conversations[0] ? relativeTimeFrom(person.conversations[0].timestamp) : "—"}
+        You've had {person.conversations.length} conversations • Last talked: {person.conversations[0] ? relativeTimeFrom(person.conversations[0].timestamp) : "—"}
       </div>
       <ul className="space-y-3">
         {person.conversations.map((c: Conversation) => (
