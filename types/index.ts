@@ -30,6 +30,26 @@ export interface Conversation {
   createdAt: Date;
   updatedAt: Date;
   person?: Person;
+  reminders?: Reminder[];
+}
+
+export enum ReminderStatus {
+  PENDING = "PENDING",
+  SENT = "SENT",
+  DISMISSED = "DISMISSED",
+}
+
+export interface Reminder {
+  id: string;
+  userId: string;
+  personId: string;
+  conversationId: string;
+  remindAt: Date;
+  status: ReminderStatus;
+  createdAt: Date;
+  updatedAt: Date;
+  person?: Person;
+  conversation?: Conversation;
 }
 
 

@@ -1,15 +1,9 @@
 "server-only";
-import { auth } from "../lib/auth"; // path to your Better Auth server instance
+
+import {auth} from "@/lib/auth";
 import { headers } from "next/headers";
 import { isMockAuthEnabled } from "@/lib/mockFlags";
 
-type SessionLike = {
-  user?: {
-    email?: string | null;
-    name?: string | null;
-    image?: string | null;
-  } | null;
-} | null;
 
 export async function getServerSessionOrMock() {
   if (isMockAuthEnabled()) {

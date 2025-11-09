@@ -7,7 +7,14 @@ export default async function PersonDetail({ params }: { params: { id: string } 
     const {id} = await params;
     const person = await prisma.person.findUnique({
     where: { id },
-    include: { conversations: { orderBy: { timestamp: "desc" } } },
+    include: {
+      conversations: { orderBy: { timestamp: "desc" } },
+      reminders: {
+        where: { status: "PENDING" },
+        include: { conversation: true },
+        orderBy: { remindAt: "asc" },
+      },
+    },
   });
 
   if (!person) return <div className="p-4">Not found</div>;
@@ -31,6 +38,34 @@ export default async function PersonDetail({ params }: { params: { id: string } 
       <div className="mb-4 text-sm text-gray-600">
         You've had {person.conversations.length} conversations • Last talked: {person.conversations[0] ? relativeTimeFrom(person.conversations[0].timestamp) : "—"}
       </div>
+
+      {/* Active Reminders */}
+      {person.reminders && person.reminders.length > 0 && (
+        <div className="mb-4">
+          <h2 className="mb-2 text-sm font-semibold">Active Reminders</h2>
+          <ul className="space-y-2">
+            {person.reminders.map((reminder: any) => (
+              <li
+                key={reminder.id}
+                className="rounded-lg border-2 border-[#FF8C42] bg-[#FFF8F0] p-3 text-sm"
+              >
+                <div className="font-medium text-[#FF6B6B]">
+                  {new Date(reminder.remindAt).toLocaleDateString()} at{" "}
+                  {new Date(reminder.remindAt).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </div>
+                <div className="mt-1 text-gray-600">
+                  {reminder.conversation.content.substring(0, 100)}
+                  {reminder.conversation.content.length > 100 && "..."}
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <ul className="space-y-3">
         {person.conversations.map((c: Conversation) => (
           <li key={c.id} className="rounded-xl bg-white p-4 shadow">
