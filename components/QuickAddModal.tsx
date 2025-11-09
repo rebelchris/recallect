@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { X, Search, Plus, Mic } from "lucide-react";
-import type { Person } from "@/types";
+import type { Person, Group } from "@/types";
 
 interface QuickAddModalProps {
   isOpen: boolean;
@@ -20,6 +20,9 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Groups
+  const [groups, setGroups] = useState<Group[]>([]);
+
   // Two-step flow
   const [step, setStep] = useState<"select" | "input">("select");
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
@@ -27,6 +30,7 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
   // New person creation
   const [isCreatingNew, setIsCreatingNew] = useState(false);
   const [newPersonName, setNewPersonName] = useState("");
+  const [newPersonGroupId, setNewPersonGroupId] = useState<string>("");
 
   // Conversation input
   const [content, setContent] = useState("");
@@ -41,10 +45,11 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const shouldStopRef = useRef(false);
 
-  // Fetch people when modal opens
+  // Fetch people and groups when modal opens
   useEffect(() => {
     if (isOpen) {
       fetchPeople();
+      fetchGroups();
     }
   }, [isOpen]);
 
@@ -84,12 +89,25 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
     }
   }
 
+  async function fetchGroups() {
+    try {
+      const res = await fetch("/api/groups");
+      if (res.ok) {
+        const data = await res.json();
+        setGroups(data);
+      }
+    } catch (error) {
+      console.error("Error fetching groups:", error);
+    }
+  }
+
   function handleClose() {
     // Reset all state
     setStep("select");
     setSelectedPerson(null);
     setIsCreatingNew(false);
     setNewPersonName("");
+    setNewPersonGroupId("");
     setContent("");
     setSearchQuery("");
     setSetReminder(false);
@@ -117,7 +135,10 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
       const res = await fetch("/api/people", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: newPersonName.trim() }),
+        body: JSON.stringify({
+          name: newPersonName.trim(),
+          groupId: newPersonGroupId || undefined
+        }),
       });
 
       if (res.ok) {
@@ -125,6 +146,7 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
         setSelectedPerson(newPerson);
         setIsCreatingNew(false);
         setNewPersonName("");
+        setNewPersonGroupId("");
         setStep("input");
       }
     } finally {
@@ -282,11 +304,24 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
                       if (e.key === "Escape") {
                         setIsCreatingNew(false);
                         setNewPersonName("");
+                        setNewPersonGroupId("");
                       }
                     }}
                     className="w-full rounded border-none bg-transparent text-base outline-none placeholder:text-gray-500"
                     autoFocus
                   />
+                  <select
+                    value={newPersonGroupId}
+                    onChange={(e) => setNewPersonGroupId(e.target.value)}
+                    className="mt-3 w-full rounded-lg border border-gray-300 bg-white p-2.5 text-sm outline-none focus:border-[#FF8C42]"
+                  >
+                    <option value="">No group</option>
+                    {groups.map((group) => (
+                      <option key={group.id} value={group.id}>
+                        {group.name}
+                      </option>
+                    ))}
+                  </select>
                   <div className="mt-3 flex gap-2">
                     <button
                       onClick={handleCreateNewPerson}
@@ -299,6 +334,7 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
                       onClick={() => {
                         setIsCreatingNew(false);
                         setNewPersonName("");
+                        setNewPersonGroupId("");
                       }}
                       className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-50"
                     >

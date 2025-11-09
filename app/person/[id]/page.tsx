@@ -58,6 +58,27 @@ export default function PersonDetail() {
     fetchPersonData();
   }, [params.id]);
 
+  // Refetch data when page becomes visible (e.g., when navigating back)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchPersonData();
+      }
+    };
+
+    const handleFocus = () => {
+      fetchPersonData();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [params.id]);
+
   if (loading) {
     return (
       <div className="p-6 text-center text-gray-500">Loading...</div>
