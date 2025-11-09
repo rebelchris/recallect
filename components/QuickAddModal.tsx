@@ -38,6 +38,7 @@ export default function QuickAddModal({ isOpen, onClose }: QuickAddModalProps) {
   // Voice recording
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const shouldStopRef = useRef(false);
 
   // Fetch people when modal opens
   useEffect(() => {
@@ -162,6 +163,7 @@ export default function QuickAddModal({ isOpen, onClose }: QuickAddModalProps) {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) return;
 
+    shouldStopRef.current = false;
     const recognition: SpeechRecognition = new SpeechRecognition();
     recognition.continuous = true;
     recognition.interimResults = true;
@@ -183,14 +185,31 @@ export default function QuickAddModal({ isOpen, onClose }: QuickAddModalProps) {
       }
     };
 
-    recognition.onend = () => setListening(false);
-    recognition.onerror = () => setListening(false);
+    recognition.onend = () => {
+      // Only stop if user manually stopped, otherwise restart
+      if (shouldStopRef.current) {
+        setListening(false);
+      } else {
+        // Auto-restart if it stopped unexpectedly
+        recognition.start();
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      // Only stop on actual errors, not on aborted/no-speech
+      if (event.error === 'aborted' || event.error === 'no-speech') {
+        return;
+      }
+      setListening(false);
+    };
+
     recognition.start();
     recognitionRef.current = recognition;
     setListening(true);
   }
 
   function stopListening() {
+    shouldStopRef.current = true;
     recognitionRef.current?.stop();
     setListening(false);
   }
