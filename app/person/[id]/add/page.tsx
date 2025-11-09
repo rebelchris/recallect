@@ -22,11 +22,19 @@ export default function AddConversation() {
     recognition.interimResults = true;
     recognition.lang = "en-US";
     recognition.onresult = (e: SpeechRecognitionEvent) => {
-      let transcript = "";
+      let finalTranscript = "";
+
+      // Only process final results to avoid duplicates
       for (let i = e.resultIndex; i < e.results.length; i++) {
-        transcript += e.results[i][0].transcript;
+        if (e.results[i].isFinal) {
+          finalTranscript += e.results[i][0].transcript + " ";
+        }
       }
-      setContent((prev) => (prev ? prev + " " : "") + transcript.trim());
+
+      // Only update if we have final results
+      if (finalTranscript) {
+        setContent((prev) => (prev ? prev + " " : "") + finalTranscript.trim());
+      }
     };
     recognition.onend = () => setListening(false);
     recognition.onerror = () => setListening(false);
