@@ -66,7 +66,14 @@ export default async function Home({
                 <li key={p.id} className="rounded-xl bg-white p-4 shadow">
                   <Link href={`/person/${p.id}`} className="block">
                     <div className="flex items-center justify-between">
-                      <div className="font-medium">{p.name}</div>
+                      <div className="flex items-center gap-2">
+                        <div className="font-medium">{p.name}</div>
+                        {p.group && (
+                          <span className="rounded-full bg-[#FF6B6B]/10 px-2 py-0.5 text-xs font-medium text-[#FF6B6B]">
+                            {p.group.name}
+                          </span>
+                        )}
+                      </div>
                       <div className="text-xs text-gray-500">
                         {last ? relativeTimeFrom(last.timestamp) : ""}
                       </div>
