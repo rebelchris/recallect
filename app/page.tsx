@@ -98,9 +98,13 @@ export default async function Home({
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-gray-500">
-                        {last ? relativeTimeFrom(last.timestamp) : ""}
-                      </div>
+                    </div>
+                    <div className="mt-2 text-xs text-gray-500">
+                      {last ? (
+                        <>Last conversation: {relativeTimeFrom(last.timestamp)}</>
+                      ) : (
+                        <span className="text-orange-500">Never contacted</span>
+                      )}
                     </div>
                     <div className="mt-1 text-sm text-gray-600">
                       {last ? firstChars(last.content) : "No conversations yet"}
