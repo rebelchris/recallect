@@ -1,21 +1,29 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/serverAuth";
-import prisma from "@/lib/prisma";
+import { getServerSessionOrMock } from "@/lib/serverAuth";
+import { prisma } from "@/lib/prisma";
 
 // GET /api/reminders - Get all reminders for the current user
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth.api.getSession({ headers: request.headers });
+    const session = await getServerSessionOrMock();
 
-    if (!session?.user?.id) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
 
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     const where: any = {
-      userId: session.user.id,
+      userId: user.id,
     };
 
     if (status) {
@@ -46,9 +54,9 @@ export async function GET(request: NextRequest) {
 // POST /api/reminders - Create a new reminder
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth.api.getSession({ headers: request.headers });
+    const session = await getServerSessionOrMock();
 
-    if (!session?.user?.id) {
+    if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
@@ -62,12 +70,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+    });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     // Verify the conversation belongs to the user
     const conversation = await prisma.conversation.findFirst({
       where: {
         id: conversationId,
         person: {
-          userId: session.user.id,
+          userId: user.id,
         },
       },
     });
@@ -81,7 +97,7 @@ export async function POST(request: NextRequest) {
 
     const reminder = await prisma.reminder.create({
       data: {
-        userId: session.user.id,
+        userId: user.id,
         personId,
         conversationId,
         remindAt: new Date(remindAt),

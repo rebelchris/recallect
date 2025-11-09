@@ -31,6 +31,10 @@ export default function QuickAddModal({ isOpen, onClose }: QuickAddModalProps) {
   const [content, setContent] = useState("");
   const [saving, setSaving] = useState(false);
 
+  // Reminder
+  const [setReminder, setSetReminder] = useState(false);
+  const [reminderDate, setReminderDate] = useState("");
+
   // Voice recording
   const [listening, setListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -75,8 +79,16 @@ export default function QuickAddModal({ isOpen, onClose }: QuickAddModalProps) {
     setNewPersonName("");
     setContent("");
     setSearchQuery("");
+    setSetReminder(false);
+    setReminderDate("");
     stopListening();
     onClose();
+  }
+
+  function setQuickReminder(days: number) {
+    const date = new Date();
+    date.setDate(date.getDate() + days);
+    setReminderDate(date.toISOString().slice(0, 16));
   }
 
   function handleSelectPerson(person: Person) {
@@ -112,6 +124,7 @@ export default function QuickAddModal({ isOpen, onClose }: QuickAddModalProps) {
 
     setSaving(true);
     try {
+      // Create the conversation
       const res = await fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -122,6 +135,21 @@ export default function QuickAddModal({ isOpen, onClose }: QuickAddModalProps) {
       });
 
       if (res.ok) {
+        const conversation = await res.json();
+
+        // Create the reminder if enabled
+        if (setReminder && reminderDate && conversation.id) {
+          await fetch("/api/reminders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              conversationId: conversation.id,
+              personId: selectedPerson.id,
+              remindAt: reminderDate,
+            }),
+          });
+        }
+
         router.refresh();
         handleClose();
       }
@@ -299,6 +327,59 @@ export default function QuickAddModal({ isOpen, onClose }: QuickAddModalProps) {
                 autoFocus
               />
 
+              {/* Reminder Section */}
+              <div className="mb-3 rounded-lg border border-gray-200 p-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={setReminder}
+                    onChange={(e) => setSetReminder(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-[#FF6B6B] focus:ring-[#FF6B6B]"
+                  />
+                  <span className="font-medium text-sm">Remind me about this</span>
+                </label>
+
+                {setReminder && (
+                  <div className="mt-3 space-y-3">
+                    <div className="flex flex-wrap gap-2">
+                      <button
+                        onClick={() => setQuickReminder(7)}
+                        className="rounded-md border border-gray-200 px-3 py-1 text-xs hover:bg-gray-50"
+                      >
+                        In 1 week
+                      </button>
+                      <button
+                        onClick={() => setQuickReminder(14)}
+                        className="rounded-md border border-gray-200 px-3 py-1 text-xs hover:bg-gray-50"
+                      >
+                        In 2 weeks
+                      </button>
+                      <button
+                        onClick={() => setQuickReminder(21)}
+                        className="rounded-md border border-gray-200 px-3 py-1 text-xs hover:bg-gray-50"
+                      >
+                        In 3 weeks
+                      </button>
+                      <button
+                        onClick={() => setQuickReminder(30)}
+                        className="rounded-md border border-gray-200 px-3 py-1 text-xs hover:bg-gray-50"
+                      >
+                        In 1 month
+                      </button>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-600">Or pick a specific date:</label>
+                      <input
+                        type="datetime-local"
+                        value={reminderDate}
+                        onChange={(e) => setReminderDate(e.target.value)}
+                        className="mt-1 w-full rounded-md border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#FF8C42]"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
               {/* Actions */}
               <div className="flex items-center gap-2">
                 <button
@@ -328,7 +409,7 @@ export default function QuickAddModal({ isOpen, onClose }: QuickAddModalProps) {
 
                 <button
                   onClick={handleSaveConversation}
-                  disabled={!content.trim() || saving}
+                  disabled={!content.trim() || saving || (setReminder && !reminderDate)}
                   className="ml-auto rounded-md bg-[#FF6B6B] px-4 py-2 text-white disabled:opacity-60"
                 >
                   {saving ? "Saving..." : "Save"}
