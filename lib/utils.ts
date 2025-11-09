@@ -1,3 +1,5 @@
+import { CHARACTER_LIMITS } from "./conversationHelpers";
+
 export function relativeTimeFrom(date: Date | string): string {
   const now = new Date();
   const dateObj = typeof date === 'string' ? new Date(date) : date;
@@ -16,7 +18,10 @@ export function relativeTimeFrom(date: Date | string): string {
   return `${yr}y ago`;
 }
 
-export function firstChars(text: string, length = 60): string {
+export function firstChars(
+  text: string,
+  length: number = CHARACTER_LIMITS.PREVIEW_SHORT
+): string {
   if (text.length <= length) return text;
   return text.slice(0, length) + "…";
 }

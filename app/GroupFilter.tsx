@@ -44,10 +44,7 @@ export default function GroupFilter({
           style={
             selectedGroupId === group.id
               ? { backgroundColor: group.color || "#FF6B6B" }
-              : {
-                  // @ts-ignore
-                  "--group-color": group.color || "#FF6B6B",
-                }
+              : undefined
           }
           onMouseEnter={(e) => {
             if (selectedGroupId !== group.id) {

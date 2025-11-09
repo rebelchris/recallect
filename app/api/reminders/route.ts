@@ -23,20 +23,12 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const where: any = {
-      userId: user.id,
-    };
-
-    if (status) {
-      where.status = status;
-    }
-
-    if (personId) {
-      where.personId = personId;
-    }
-
     const reminders = await prisma.reminder.findMany({
-      where,
+      where: {
+        userId: user.id,
+        ...(status && { status: status as "PENDING" | "SENT" | "DISMISSED" }),
+        ...(personId && { personId }),
+      },
       include: {
         person: true,
         conversation: true,

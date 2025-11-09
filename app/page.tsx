@@ -4,7 +4,9 @@ import Link from "next/link";
 import { getServerSessionOrMock } from "@/lib/serverAuth";
 import { prisma } from "@/lib/prisma";
 import { firstChars, relativeTimeFrom } from "@/lib/utils";
-import {Person, Conversation, Reminder, ReminderStatus} from "@/types";
+import { CHARACTER_LIMITS } from "@/lib/conversationHelpers";
+import type { Person, Reminder } from "@/types";
+import { ReminderStatus } from "@/types";
 import GroupFilter from "./GroupFilter";
 import SearchBar from "./SearchBar";
 
@@ -96,7 +98,7 @@ export default async function Home({
           <div className="mb-8">
             <h2 className="mb-4 text-lg font-semibold text-gray-800">Upcoming Reminders</h2>
             <ul className="space-y-3">
-              {upcomingReminders.map((reminder) => (
+              {upcomingReminders.map((reminder: Reminder) => (
                 <li
                   key={reminder.id}
                   className="group rounded-2xl border-2 border-[#FF8C42] bg-gradient-to-br from-white to-orange-50/30 p-4 shadow-sm transition-all duration-200 hover:shadow-md"
@@ -105,9 +107,11 @@ export default async function Home({
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
                         <div className="font-semibold text-gray-900">{reminder.person?.name}</div>
-                        <div className="mt-2 text-sm leading-relaxed text-gray-700">
-                          {reminder.conversation && firstChars(reminder.conversation.content, 80)}
-                        </div>
+                        {reminder.conversation && (
+                          <div className="mt-2 text-sm leading-relaxed text-gray-700">
+                            {firstChars(reminder.conversation.content, CHARACTER_LIMITS.PREVIEW_LONG)}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="mt-3 flex items-center gap-1.5 text-xs font-medium text-[#FF6B6B]">

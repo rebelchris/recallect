@@ -30,7 +30,7 @@ export default function AddPersonPage() {
     e.preventDefault();
     setSaving(true);
     try {
-      await fetch("/api/people", {
+      const response = await fetch("/api/people", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -39,6 +39,12 @@ export default function AddPersonPage() {
           groupId: groupId || undefined
         }),
       });
+
+      if (!response.ok) {
+        console.error("Failed to create person");
+        return;
+      }
+
       router.replace("/");
     } finally {
       setSaving(false);
