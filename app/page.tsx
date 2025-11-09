@@ -69,7 +69,13 @@ export default async function Home({
                       <div className="flex items-center gap-2">
                         <div className="font-medium">{p.name}</div>
                         {p.group && (
-                          <span className="rounded-full bg-[#FF6B6B]/10 px-2 py-0.5 text-xs font-medium text-[#FF6B6B]">
+                          <span
+                            className="rounded-full px-2 py-0.5 text-xs font-medium"
+                            style={{
+                              backgroundColor: p.group.color ? `${p.group.color}20` : "#FF6B6B20",
+                              color: p.group.color || "#FF6B6B",
+                            }}
+                          >
                             {p.group.name}
                           </span>
                         )}

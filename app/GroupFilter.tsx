@@ -38,9 +38,27 @@ export default function GroupFilter({
           onClick={() => handleGroupChange(group.id)}
           className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
             selectedGroupId === group.id
-              ? "bg-[#FF6B6B] text-white"
-              : "bg-white text-gray-700 hover:bg-gray-100"
+              ? "text-white"
+              : "bg-white text-gray-700"
           }`}
+          style={
+            selectedGroupId === group.id
+              ? { backgroundColor: group.color || "#FF6B6B" }
+              : {
+                  // @ts-ignore
+                  "--group-color": group.color || "#FF6B6B",
+                }
+          }
+          onMouseEnter={(e) => {
+            if (selectedGroupId !== group.id) {
+              e.currentTarget.style.backgroundColor = `${group.color || "#FF6B6B"}15`;
+            }
+          }}
+          onMouseLeave={(e) => {
+            if (selectedGroupId !== group.id) {
+              e.currentTarget.style.backgroundColor = "white";
+            }
+          }}
         >
           {group.name}
         </button>
