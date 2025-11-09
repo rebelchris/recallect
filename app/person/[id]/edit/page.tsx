@@ -4,6 +4,8 @@ import { useRouter, useParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import type { Group, Person } from "@/types";
 import Link from "next/link";
+import DeleteConfirmDialog from "@/components/DeleteConfirmDialog";
+import { Trash2 } from "lucide-react";
 
 export default function EditPersonPage() {
   const params = useParams();
@@ -14,6 +16,8 @@ export default function EditPersonPage() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -65,6 +69,23 @@ export default function EditPersonPage() {
       }
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleDelete() {
+    setIsDeleting(true);
+    try {
+      const res = await fetch(`/api/people/${id}`, {
+        method: "DELETE",
+      });
+
+      if (res.ok) {
+        router.push("/");
+      }
+    } catch (error) {
+      console.error("Failed to delete person:", error);
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -127,6 +148,36 @@ export default function EditPersonPage() {
           {saving ? "Saving…" : "Save Changes"}
         </button>
       </form>
+
+      {/* Delete Person Section */}
+      <div className="mt-8 pt-6 border-t border-gray-200">
+        <h2 className="text-lg font-semibold text-gray-900 mb-2">
+          Danger Zone
+        </h2>
+        <p className="text-sm text-gray-600 mb-4">
+          Deleting this person will also delete all conversations and reminders
+          associated with them.
+        </p>
+        <button
+          type="button"
+          onClick={() => setShowDeleteDialog(true)}
+          disabled={isDeleting}
+          className="flex items-center gap-2 px-4 py-2.5 text-red-600 bg-red-50 border border-red-200 rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+        >
+          <Trash2 className="w-4 h-4" />
+          Delete Person
+        </button>
+      </div>
+
+      <DeleteConfirmDialog
+        isOpen={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleDelete}
+        title="Delete Person"
+        message="Are you sure you want to delete this person? This will also delete all conversations and reminders associated with them."
+        itemName={name}
+        isDeleting={isDeleting}
+      />
     </main>
   );
 }

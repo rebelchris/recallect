@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const status = searchParams.get("status");
+    const personId = searchParams.get("personId");
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
@@ -28,6 +29,10 @@ export async function GET(request: NextRequest) {
 
     if (status) {
       where.status = status;
+    }
+
+    if (personId) {
+      where.personId = personId;
     }
 
     const reminders = await prisma.reminder.findMany({

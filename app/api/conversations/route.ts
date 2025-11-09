@@ -1,7 +1,50 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServerSessionOrMock } from "@/lib/serverAuth";
 import { prisma } from "@/lib/prisma";
 import { isMockAuthEnabled } from "@/lib/mockFlags";
+
+export async function GET(request: NextRequest) {
+  const session = await getServerSessionOrMock();
+  if (!session?.user?.email)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { searchParams } = new URL(request.url);
+  const personId = searchParams.get("personId");
+
+  if (isMockAuthEnabled()) {
+    return NextResponse.json([
+      {
+        id: "mock-convo",
+        content: "Mock conversation",
+        timestamp: new Date().toISOString(),
+        personId: personId || "mock-person",
+      },
+    ]);
+  }
+
+  const where: any = {
+    person: {
+      user: { email: session.user.email },
+    },
+  };
+
+  if (personId) {
+    where.personId = personId;
+  }
+
+  const conversations = await prisma.conversation.findMany({
+    where,
+    include: {
+      person: true,
+      reminders: true,
+    },
+    orderBy: {
+      timestamp: "desc",
+    },
+  });
+
+  return NextResponse.json(conversations);
+}
 
 export async function POST(req: Request) {
   const session = await getServerSessionOrMock();
