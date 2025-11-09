@@ -8,9 +8,10 @@ import type { Person } from "@/types";
 interface QuickAddModalProps {
   isOpen: boolean;
   onClose: () => void;
+  preselectedPersonId?: string;
 }
 
-export default function QuickAddModal({ isOpen, onClose }: QuickAddModalProps) {
+export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: QuickAddModalProps) {
   const router = useRouter();
   const dialogRef = useRef<HTMLDialogElement>(null);
 
@@ -45,6 +46,17 @@ export default function QuickAddModal({ isOpen, onClose }: QuickAddModalProps) {
       fetchPeople();
     }
   }, [isOpen]);
+
+  // Auto-select person if preselectedPersonId is provided
+  useEffect(() => {
+    if (isOpen && preselectedPersonId && people.length > 0) {
+      const person = people.find((p) => p.id === preselectedPersonId);
+      if (person) {
+        setSelectedPerson(person);
+        setStep("input");
+      }
+    }
+  }, [isOpen, preselectedPersonId, people]);
 
   // Handle dialog open/close
   useEffect(() => {

@@ -1,11 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import { Plus } from "lucide-react";
 import QuickAddModal from "./QuickAddModal";
 
-export default function FloatingAddButton() {
+interface FloatingAddButtonProps {
+  personId?: string;
+}
+
+export default function FloatingAddButton({ personId }: FloatingAddButtonProps = {}) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const pathname = usePathname();
+  const [detectedPersonId, setDetectedPersonId] = useState<string | undefined>(personId);
+
+  // Detect if we're on a person page and extract the person ID
+  useEffect(() => {
+    if (personId) {
+      setDetectedPersonId(personId);
+      return;
+    }
+
+    // Match pattern: /person/[id] or /person/[id]/...
+    const personPageMatch = pathname.match(/^\/person\/([^\/]+)/);
+    if (personPageMatch) {
+      setDetectedPersonId(personPageMatch[1]);
+    } else {
+      setDetectedPersonId(undefined);
+    }
+  }, [pathname, personId]);
 
   return (
     <>
@@ -17,7 +40,11 @@ export default function FloatingAddButton() {
         <Plus size={24} />
       </button>
 
-      <QuickAddModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <QuickAddModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        preselectedPersonId={detectedPersonId}
+      />
     </>
   );
 }
