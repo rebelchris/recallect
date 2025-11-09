@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { relativeTimeFrom } from "@/lib/utils";
-import {Conversation} from "@/types";
+import {Conversation, ReminderStatus} from "@/types";
 
 export default async function PersonDetail({ params }: { params: { id: string } }) {
     const {id} = await params;
@@ -10,7 +10,7 @@ export default async function PersonDetail({ params }: { params: { id: string } 
     include: {
       conversations: { orderBy: { timestamp: "desc" } },
       reminders: {
-        where: { status: "PENDING" },
+        where: { status: ReminderStatus.PENDING },
         include: { conversation: true },
         orderBy: { remindAt: "asc" },
       },

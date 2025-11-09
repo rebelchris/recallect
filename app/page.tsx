@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getServerSessionOrMock } from "@/lib/serverAuth";
 import { prisma } from "@/lib/prisma";
 import { firstChars, relativeTimeFrom } from "@/lib/utils";
-import type { Person, Conversation, Reminder } from "@/types";
+import {Person, Conversation, Reminder, ReminderStatus} from "@/types";
 import GroupFilter from "./GroupFilter";
 import SearchBar from "./SearchBar";
 
@@ -66,7 +66,7 @@ export default async function Home({
     ? await prisma.reminder.findMany({
         where: {
           userId: user.id,
-          status: "PENDING",
+          status: ReminderStatus.PENDING,
           remindAt: { gte: new Date() },
         },
         include: {
@@ -94,7 +94,7 @@ export default async function Home({
           <div className="mb-8">
             <h2 className="mb-4 text-lg font-semibold text-gray-800">Upcoming Reminders</h2>
             <ul className="space-y-3">
-              {upcomingReminders.map((reminder: Reminder) => (
+              {upcomingReminders.map((reminder) => (
                 <li
                   key={reminder.id}
                   className="group rounded-2xl border-2 border-[#FF8C42] bg-gradient-to-br from-white to-orange-50/30 p-4 shadow-sm transition-all duration-200 hover:shadow-md"
