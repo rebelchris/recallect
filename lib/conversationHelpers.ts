@@ -1,5 +1,11 @@
 // Shared utilities for conversation management
 
+// Extend Window interface to include SpeechRecognition
+interface WindowWithSpeechRecognition extends Window {
+  SpeechRecognition?: typeof SpeechRecognition;
+  webkitSpeechRecognition?: typeof SpeechRecognition;
+}
+
 /**
  * Quick reminder time presets (in days)
  */
@@ -42,9 +48,10 @@ export function startSpeechRecognition(
   onEnd: () => void,
   onError: () => void
 ): SpeechRecognition | null {
+  const windowWithSpeech = window as unknown as WindowWithSpeechRecognition;
   const SpeechRecognition =
-    (window as any).SpeechRecognition ||
-    (window as any).webkitSpeechRecognition;
+    windowWithSpeech.SpeechRecognition ||
+    windowWithSpeech.webkitSpeechRecognition;
 
   if (!SpeechRecognition) {
     console.warn("Speech recognition not supported in this browser");

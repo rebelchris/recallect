@@ -41,12 +41,15 @@ export async function PATCH(
       );
     }
 
-    const updateData: any = {};
+    const updateData: {
+      remindAt?: Date;
+      status?: "PENDING" | "SENT" | "DISMISSED";
+    } = {};
     if (remindAt) {
       updateData.remindAt = new Date(remindAt);
     }
     if (status) {
-      updateData.status = status;
+      updateData.status = status as "PENDING" | "SENT" | "DISMISSED";
     }
 
     const reminder = await prisma.reminder.update({
