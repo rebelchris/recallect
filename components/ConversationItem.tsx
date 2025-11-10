@@ -51,11 +51,12 @@ export default function ConversationItem({
               {conversation.content}
             </div>
           </div>
-          <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
             <button
               onClick={() => onEdit(conversation)}
               className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
               title="Edit conversation"
+              aria-label="Edit conversation"
             >
               <Pencil className="w-4 h-4" />
             </button>
@@ -63,6 +64,7 @@ export default function ConversationItem({
               onClick={() => setShowDeleteDialog(true)}
               className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
               title="Delete conversation"
+              aria-label="Delete conversation"
             >
               <Trash2 className="w-4 h-4" />
             </button>

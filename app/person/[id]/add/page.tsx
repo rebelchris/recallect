@@ -172,21 +172,38 @@ export default function AddConversation() {
       </div>
 
       <div className="mt-5 flex items-center gap-2">
-        {!listening ? (
-          <button onClick={startListening} className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium shadow-sm transition-all hover:bg-gray-50 hover:shadow">
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-            </svg>
-            Start voice
-          </button>
-        ) : (
-          <button onClick={stopListening} className="flex items-center gap-2 rounded-lg border-2 border-[#FF6B6B] bg-red-50 px-4 py-2.5 text-sm font-medium text-[#FF6B6B] shadow-sm transition-colors hover:bg-red-100">
-            <svg className="h-4 w-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-            </svg>
-            Stop
-          </button>
-        )}
+        <button
+          onPointerDown={(e) => {
+            e.preventDefault();
+            startListening();
+          }}
+          onPointerUp={(e) => {
+            e.preventDefault();
+            stopListening();
+          }}
+          onPointerCancel={(e) => {
+            e.preventDefault();
+            stopListening();
+          }}
+          onPointerLeave={(e) => {
+            if (listening) {
+              e.preventDefault();
+              stopListening();
+            }
+          }}
+          className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium shadow-sm transition-all select-none touch-none ${
+            listening
+              ? "border-2 border-[#FF6B6B] bg-red-50 text-[#FF6B6B] scale-95"
+              : "border border-gray-200 bg-white hover:bg-gray-50 hover:shadow"
+          }`}
+          aria-label="Press and hold to record voice"
+          title="Press and hold to record voice"
+        >
+          <svg className={`h-4 w-4 ${listening ? "animate-pulse" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+          </svg>
+          {listening ? "Recording..." : "Hold to speak"}
+        </button>
         <button
           onClick={onSave}
           disabled={!content || saving || (setReminder && !reminderDate)}

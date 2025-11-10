@@ -464,23 +464,38 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
                   Back
                 </button>
 
-                {!listening ? (
-                  <button
-                    onClick={startListening}
-                    className="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 transition-colors hover:bg-gray-50"
-                  >
-                    <Mic size={16} />
-                    <span className="text-sm font-medium">Voice</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={stopListening}
-                    className="flex items-center gap-2 rounded-lg border-2 border-[#FF6B6B] bg-red-50 px-4 py-2.5 text-[#FF6B6B] transition-colors hover:bg-red-100"
-                  >
-                    <Mic size={16} className="animate-pulse" />
-                    <span className="text-sm font-medium">Stop</span>
-                  </button>
-                )}
+                <button
+                  onPointerDown={(e) => {
+                    e.preventDefault();
+                    startListening();
+                  }}
+                  onPointerUp={(e) => {
+                    e.preventDefault();
+                    stopListening();
+                  }}
+                  onPointerCancel={(e) => {
+                    e.preventDefault();
+                    stopListening();
+                  }}
+                  onPointerLeave={(e) => {
+                    if (listening) {
+                      e.preventDefault();
+                      stopListening();
+                    }
+                  }}
+                  className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all select-none touch-none ${
+                    listening
+                      ? "border-2 border-[#FF6B6B] bg-red-50 text-[#FF6B6B] scale-95"
+                      : "border border-gray-200 hover:bg-gray-50"
+                  }`}
+                  aria-label="Press and hold to record voice"
+                  title="Press and hold to record voice"
+                >
+                  <Mic size={16} className={listening ? "animate-pulse" : ""} />
+                  <span className="text-sm font-medium">
+                    {listening ? "Recording..." : "Hold to speak"}
+                  </span>
+                </button>
 
                 <button
                   onClick={handleSaveConversation}
