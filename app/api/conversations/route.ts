@@ -22,18 +22,13 @@ export async function GET(request: NextRequest) {
     ]);
   }
 
-  const where: any = {
-    person: {
-      user: { email: session.user.email },
-    },
-  };
-
-  if (personId) {
-    where.personId = personId;
-  }
-
   const conversations = await prisma.conversation.findMany({
-    where,
+    where: {
+      person: {
+        user: { email: session.user.email },
+      },
+      ...(personId && { personId }),
+    },
     include: {
       person: true,
       reminders: true,

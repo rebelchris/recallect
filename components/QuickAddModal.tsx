@@ -193,11 +193,11 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
   }
 
   function startListening() {
-    const SpeechRecognition = (window as typeof window & { SpeechRecognition?: typeof SpeechRecognition; webkitSpeechRecognition?: typeof SpeechRecognition }).SpeechRecognition || (window as typeof window & { SpeechRecognition?: typeof SpeechRecognition; webkitSpeechRecognition?: typeof SpeechRecognition }).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+    const SpeechRecognitionAPI = (window as typeof window & { SpeechRecognition?: new () => SpeechRecognition; webkitSpeechRecognition?: new () => SpeechRecognition }).SpeechRecognition || (window as typeof window & { SpeechRecognition?: new () => SpeechRecognition; webkitSpeechRecognition?: new () => SpeechRecognition }).webkitSpeechRecognition;
+    if (!SpeechRecognitionAPI) return;
 
     shouldStopRef.current = false;
-    const recognition: SpeechRecognition = new SpeechRecognition();
+    const recognition = new SpeechRecognitionAPI();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-US";
