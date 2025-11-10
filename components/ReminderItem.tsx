@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, X } from "lucide-react";
+import { Check } from "lucide-react";
 import type { Reminder } from "@/types";
 
 interface ReminderItemProps {

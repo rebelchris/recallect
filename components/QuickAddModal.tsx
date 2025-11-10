@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { X, Search, Plus, Mic } from "lucide-react";
+import { calculateQuickReminderDate } from "@/lib/conversationHelpers";
 import type { Person, Group } from "@/types";
 
 interface QuickAddModalProps {
@@ -117,9 +118,7 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
   }
 
   function setQuickReminder(days: number) {
-    const date = new Date();
-    date.setDate(date.getDate() + days);
-    setReminderDate(date.toISOString().slice(0, 16));
+    setReminderDate(calculateQuickReminderDate(days));
   }
 
   function handleSelectPerson(person: Person) {
@@ -194,11 +193,11 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
   }
 
   function startListening() {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+    const SpeechRecognitionAPI = (window as typeof window & { SpeechRecognition?: new () => SpeechRecognition; webkitSpeechRecognition?: new () => SpeechRecognition }).SpeechRecognition || (window as typeof window & { SpeechRecognition?: new () => SpeechRecognition; webkitSpeechRecognition?: new () => SpeechRecognition }).webkitSpeechRecognition;
+    if (!SpeechRecognitionAPI) return;
 
     shouldStopRef.current = false;
-    const recognition: SpeechRecognition = new SpeechRecognition();
+    const recognition = new SpeechRecognitionAPI();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-US";
@@ -229,7 +228,7 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
       }
     };
 
-    recognition.onerror = (event: any) => {
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       // Only stop on actual errors, not on aborted/no-speech
       if (event.error === 'aborted' || event.error === 'no-speech') {
         return;

@@ -1,11 +1,3 @@
-type SessionLike = {
-  user?: {
-    email?: string | null;
-    name?: string | null;
-    image?: string | null;
-  } | null;
-};
-
 export async function getServerSessionOrMock() {
   if (process.env.NEXT_PUBLIC_MOCK_AUTH === "1") {
     const email = process.env.MOCK_EMAIL || "mock@example.com";

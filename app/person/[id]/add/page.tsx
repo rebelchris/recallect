@@ -1,8 +1,8 @@
 "use client";
 
-import * as React from 'react'
 import { useState, useRef } from "react";
-import {useParams, useRouter} from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { calculateQuickReminderDate } from "@/lib/conversationHelpers";
 
 export default function AddConversation() {
     const {id} = useParams()
@@ -16,11 +16,11 @@ export default function AddConversation() {
   const [reminderDate, setReminderDate] = useState("");
 
   function startListening() {
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) return;
+    const SpeechRecognitionAPI = (window as typeof window & { SpeechRecognition?: new () => SpeechRecognition; webkitSpeechRecognition?: new () => SpeechRecognition }).SpeechRecognition || (window as typeof window & { SpeechRecognition?: new () => SpeechRecognition; webkitSpeechRecognition?: new () => SpeechRecognition }).webkitSpeechRecognition;
+    if (!SpeechRecognitionAPI) return;
 
     shouldStopRef.current = false;
-    const recognition: SpeechRecognition = new SpeechRecognition();
+    const recognition = new SpeechRecognitionAPI();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-US";
@@ -51,7 +51,7 @@ export default function AddConversation() {
       }
     };
 
-    recognition.onerror = (event: any) => {
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       // Only stop on actual errors, not on aborted/no-speech
       if (event.error === 'aborted' || event.error === 'no-speech') {
         return;
@@ -71,9 +71,7 @@ export default function AddConversation() {
   }
 
   function setQuickReminder(days: number) {
-    const date = new Date();
-    date.setDate(date.getDate() + days);
-    setReminderDate(date.toISOString().slice(0, 16));
+    setReminderDate(calculateQuickReminderDate(days));
   }
 
   async function onSave() {
@@ -86,11 +84,16 @@ export default function AddConversation() {
         body: JSON.stringify({ personId: id, content }),
       });
 
+      if (!response.ok) {
+        console.error("Failed to create conversation");
+        return;
+      }
+
       const conversation = await response.json();
 
       // Create the reminder if enabled
       if (setReminder && reminderDate && conversation.id) {
-        await fetch("/api/reminders", {
+        const reminderResponse = await fetch("/api/reminders", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -99,6 +102,10 @@ export default function AddConversation() {
             remindAt: reminderDate,
           }),
         });
+
+        if (!reminderResponse.ok) {
+          console.error("Failed to create reminder");
+        }
       }
 
       // Use back() to return to the previous page, which will trigger a fresh fetch
