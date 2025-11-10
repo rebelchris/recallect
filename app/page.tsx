@@ -98,7 +98,7 @@ export default async function Home({
           <div className="mb-8">
             <h2 className="mb-4 text-lg font-semibold text-gray-800">Upcoming Reminders</h2>
             <ul className="space-y-3">
-              {upcomingReminders.map((reminder: Reminder) => (
+              {upcomingReminders.map((reminder) => (
                 <li
                   key={reminder.id}
                   className="group rounded-2xl border-2 border-[#FF8C42] bg-gradient-to-br from-white to-orange-50/30 p-4 shadow-sm transition-all duration-200 hover:shadow-md"
