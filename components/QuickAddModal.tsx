@@ -336,7 +336,7 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
                   placeholder="Search people..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 bg-transparent outline-none placeholder:text-muted-foreground"
+                  className="flex-1 bg-transparent text-foreground outline-none placeholder:text-muted-foreground"
                   autoFocus
                 />
               </div>
@@ -357,13 +357,13 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
                         setNewPersonGroupId("");
                       }
                     }}
-                    className="w-full rounded border-none bg-transparent text-base outline-none placeholder:text-muted-foreground"
+                    className="w-full rounded border-none bg-transparent text-foreground text-base outline-none placeholder:text-muted-foreground"
                     autoFocus
                   />
                   <select
                     value={newPersonGroupId}
                     onChange={(e) => setNewPersonGroupId(e.target.value)}
-                    className="mt-3 w-full rounded-lg border border-border bg-card p-2.5 text-sm outline-none focus:border-secondary"
+                    className="mt-3 w-full rounded-lg border border-border bg-card text-foreground p-2.5 text-sm outline-none focus:border-secondary"
                   >
                     <option value="">No group</option>
                     {groups.map((group) => (
@@ -386,7 +386,7 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
                         setNewPersonName("");
                         setNewPersonGroupId("");
                       }}
-                      className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
+                      className="rounded-lg border border-border text-foreground px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
                     >
                       Cancel
                     </button>
@@ -395,7 +395,7 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
               ) : (
                 <button
                   onClick={() => setIsCreatingNew(true)}
-                  className="mb-4 flex w-full items-center gap-2.5 rounded-xl border-2 border-dashed border-border p-4 transition-all hover:border-secondary hover:bg-accent"
+                  className="mb-4 flex w-full items-center gap-2.5 rounded-xl border-2 border-dashed border-border text-foreground p-4 transition-all hover:border-secondary hover:bg-accent"
                 >
                   <Plus size={20} className="text-primary" />
                   <span className="text-sm font-semibold">Create new person</span>
@@ -417,7 +417,7 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
                     <li key={person.id}>
                       <button
                         onClick={() => handleSelectPerson(person)}
-                        className="w-full rounded-xl p-4 text-left transition-all hover:bg-muted active:bg-muted"
+                        className="w-full rounded-xl text-foreground p-4 text-left transition-all hover:bg-muted active:bg-muted"
                       >
                         <div className="flex items-center justify-between">
                           <div className="font-semibold">{person.name}</div>
@@ -448,7 +448,7 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
                 placeholder="What did you talk about?"
-                className="mb-4 h-44 w-full resize-none rounded-xl border border-border bg-input p-4 text-base outline-none transition-colors focus:border-secondary focus:bg-card"
+                className="mb-4 h-44 w-full resize-none rounded-xl border border-border bg-input text-foreground p-4 text-base outline-none transition-colors focus:border-secondary focus:bg-card placeholder:text-muted-foreground"
                 autoFocus
               />
 
@@ -472,7 +472,7 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
 
               {/* Reminder Section */}
               <div className="mb-4 rounded-xl border border-border bg-muted p-4">
-                <label className="flex cursor-pointer items-center gap-2.5">
+                <label className="flex cursor-pointer items-center gap-2.5 text-foreground">
                   <input
                     type="checkbox"
                     checked={setReminder}
@@ -487,25 +487,25 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => setQuickReminder(7)}
-                        className="rounded-lg border border-border bg-card px-3.5 py-2 text-sm font-medium transition-colors hover:border-secondary hover:bg-accent"
+                        className="rounded-lg border border-border bg-card text-foreground px-3.5 py-2 text-sm font-medium transition-colors hover:border-secondary hover:bg-accent"
                       >
                         In 1 week
                       </button>
                       <button
                         onClick={() => setQuickReminder(14)}
-                        className="rounded-lg border border-border bg-card px-3.5 py-2 text-sm font-medium transition-colors hover:border-secondary hover:bg-accent"
+                        className="rounded-lg border border-border bg-card text-foreground px-3.5 py-2 text-sm font-medium transition-colors hover:border-secondary hover:bg-accent"
                       >
                         In 2 weeks
                       </button>
                       <button
                         onClick={() => setQuickReminder(21)}
-                        className="rounded-lg border border-border bg-card px-3.5 py-2 text-sm font-medium transition-colors hover:border-secondary hover:bg-accent"
+                        className="rounded-lg border border-border bg-card text-foreground px-3.5 py-2 text-sm font-medium transition-colors hover:border-secondary hover:bg-accent"
                       >
                         In 3 weeks
                       </button>
                       <button
                         onClick={() => setQuickReminder(30)}
-                        className="rounded-lg border border-border bg-card px-3.5 py-2 text-sm font-medium transition-colors hover:border-secondary hover:bg-accent"
+                        className="rounded-lg border border-border bg-card text-foreground px-3.5 py-2 text-sm font-medium transition-colors hover:border-secondary hover:bg-accent"
                       >
                         In 1 month
                       </button>
@@ -516,7 +516,7 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
                         type="datetime-local"
                         value={reminderDate}
                         onChange={(e) => setReminderDate(e.target.value)}
-                        className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm outline-none transition-colors focus:border-secondary"
+                        className="w-full rounded-lg border border-border bg-card text-foreground px-3 py-2.5 text-sm outline-none transition-colors focus:border-secondary"
                       />
                     </div>
                   </div>
@@ -527,7 +527,7 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setStep("select")}
-                  className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
+                  className="rounded-lg border border-border text-foreground px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
                 >
                   Back
                 </button>
@@ -554,7 +554,7 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
                   className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all select-none touch-none ${
                     listening
                       ? "border-2 border-primary bg-accent text-primary scale-95"
-                      : "border border-border hover:bg-muted"
+                      : "border border-border text-foreground hover:bg-muted"
                   }`}
                   aria-label="Press and hold to record voice"
                   title="Press and hold to record voice"
@@ -571,7 +571,7 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
                       setShowTextFallback(false);
                       setVoiceError("");
                     }}
-                    className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50"
+                    className="rounded-lg border border-border bg-card text-foreground px-4 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
                   >
                     Type instead
                   </button>
