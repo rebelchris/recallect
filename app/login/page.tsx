@@ -8,11 +8,11 @@ export default function LoginPage() {
   const { data: session } = useSession()
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-gradient-to-br from-[#FAFAFA] to-gray-100 p-6 text-[#2D3748]">
-      <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-lg">
+    <main className="flex min-h-dvh items-center justify-center bg-background p-6">
+      <div className="w-full max-w-sm rounded-2xl bg-card p-8 shadow-lg">
         <div className="mb-6 text-center">
           <h1 className="mb-2 text-3xl font-bold tracking-tight">Welcome back</h1>
-          <p className="text-sm text-gray-600">Sign in to continue to Recallect</p>
+          <p className="text-sm text-muted-foreground">Sign in to continue to Recallect</p>
         </div>
         {session ? (
           <div className="rounded-xl bg-green-50 p-4 text-center">
@@ -22,7 +22,7 @@ export default function LoginPage() {
         ) : (
           <button
             onClick={() => signIn.social({ provider: "google" })}
-            className="flex w-full items-center justify-center gap-3 rounded-xl border-2 border-gray-200 bg-white px-6 py-3.5 font-semibold text-gray-700 shadow-sm transition-all hover:border-gray-300 hover:bg-gray-50 hover:shadow active:scale-[0.98]"
+            className="flex w-full items-center justify-center gap-3 rounded-xl border-2 border-border bg-card px-6 py-3.5 font-semibold shadow-sm transition-all hover:border-muted-foreground hover:bg-muted hover:shadow active:scale-[0.98]"
           >
             <svg className="h-5 w-5" viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
