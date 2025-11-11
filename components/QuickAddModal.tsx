@@ -527,35 +527,24 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
                 </button>
 
                 <button
-                  onPointerDown={(e) => {
-                    e.preventDefault();
-                    startListening();
-                  }}
-                  onPointerUp={(e) => {
-                    e.preventDefault();
-                    stopListening();
-                  }}
-                  onPointerCancel={(e) => {
-                    e.preventDefault();
-                    stopListening();
-                  }}
-                  onPointerLeave={(e) => {
+                  onClick={() => {
                     if (listening) {
-                      e.preventDefault();
                       stopListening();
+                    } else {
+                      startListening();
                     }
                   }}
-                  className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all select-none touch-none ${
+                  className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
                     listening
-                      ? "border-2 border-primary bg-accent text-primary scale-95"
+                      ? "border-2 border-primary bg-accent text-primary"
                       : "border border-border text-foreground hover:bg-muted"
                   }`}
-                  aria-label="Press and hold to record voice"
-                  title="Press and hold to record voice"
+                  aria-label={listening ? "Stop recording" : "Start recording"}
+                  title={listening ? "Click to stop recording" : "Click to start recording"}
                 >
                   <Mic size={16} className={listening ? "animate-pulse" : ""} />
                   <span className="text-sm font-medium">
-                    {listening ? "Recording..." : "Hold to speak"}
+                    {listening ? "Stop recording" : "Start recording"}
                   </span>
                 </button>
 
