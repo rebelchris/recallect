@@ -11,22 +11,43 @@ export default function AddConversation() {
   const [saving, setSaving] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const shouldStopRef = useRef(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [listening, setListening] = useState(false);
+  const [voiceError, setVoiceError] = useState<string>("");
+  const [showTextFallback, setShowTextFallback] = useState(false);
   const [setReminder, setSetReminder] = useState(false);
   const [reminderDate, setReminderDate] = useState("");
 
   function startListening() {
     const SpeechRecognitionAPI = (window as typeof window & { SpeechRecognition?: new () => SpeechRecognition; webkitSpeechRecognition?: new () => SpeechRecognition }).SpeechRecognition || (window as typeof window & { SpeechRecognition?: new () => SpeechRecognition; webkitSpeechRecognition?: new () => SpeechRecognition }).webkitSpeechRecognition;
-    if (!SpeechRecognitionAPI) return;
+    if (!SpeechRecognitionAPI) {
+      setVoiceError("Voice recognition is not supported in your browser. Please type instead.");
+      setShowTextFallback(true);
+      return;
+    }
 
     shouldStopRef.current = false;
+    setVoiceError("");
     const recognition = new SpeechRecognitionAPI();
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-US";
 
+    // Auto-stop after 30 seconds of silence
+    const resetTimeout = () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      timeoutRef.current = setTimeout(() => {
+        stopListening();
+      }, 30000);
+    };
+
     recognition.onresult = (e: SpeechRecognitionEvent) => {
       let finalTranscript = "";
+
+      // Reset the 30-second timeout on every result
+      resetTimeout();
 
       // Only process final results to avoid duplicates
       for (let i = e.resultIndex; i < e.results.length; i++) {
@@ -42,30 +63,58 @@ export default function AddConversation() {
     };
 
     recognition.onend = () => {
+      // Clean up timeout
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
       // Only stop if user manually stopped, otherwise restart
       if (shouldStopRef.current) {
         setListening(false);
       } else {
         // Auto-restart if it stopped unexpectedly
         recognition.start();
+        resetTimeout();
       }
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      // Only stop on actual errors, not on aborted/no-speech
-      if (event.error === 'aborted' || event.error === 'no-speech') {
-        return;
+      // Clean up timeout
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
       }
+
+      // Handle different error types with user-friendly messages
+      if (event.error === 'no-speech') {
+        setVoiceError("No speech detected. Try again?");
+        setShowTextFallback(true);
+      } else if (event.error === 'not-allowed') {
+        setVoiceError("Microphone access denied. Please check your browser settings and allow microphone access.");
+        setShowTextFallback(true);
+      } else if (event.error === 'network') {
+        setVoiceError("Network error. Please check your connection and try again.");
+        setShowTextFallback(true);
+      } else if (event.error === 'aborted') {
+        // Just stop, don't show error for user-initiated stops
+        return;
+      } else {
+        setVoiceError(`Voice recognition error: ${event.error}. Try typing instead.`);
+        setShowTextFallback(true);
+      }
+
       setListening(false);
     };
 
     recognition.start();
     recognitionRef.current = recognition;
     setListening(true);
+    resetTimeout();
   }
 
   function stopListening() {
     shouldStopRef.current = true;
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
     recognitionRef.current?.stop();
     setListening(false);
   }
@@ -178,6 +227,24 @@ export default function AddConversation() {
         )}
       </div>
 
+      {/* Error message */}
+      {voiceError && (
+        <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+          {voiceError}
+        </div>
+      )}
+
+      {/* Listening indicator */}
+      {listening && (
+        <div className="mt-4 flex items-center gap-3 rounded-lg border-2 border-[#FF6B6B] bg-red-50 p-4">
+          <div className="relative flex h-4 w-4 items-center justify-center">
+            <div className="absolute h-4 w-4 animate-ping rounded-full bg-[#FF6B6B] opacity-75"></div>
+            <div className="relative h-4 w-4 rounded-full bg-[#FF6B6B]"></div>
+          </div>
+          <span className="font-semibold text-[#FF6B6B]">Listening... (auto-stops after 30s of silence)</span>
+        </div>
+      )}
+
       <div className="mt-5 flex items-center gap-2">
         <button
           onPointerDown={(e) => {
@@ -211,6 +278,17 @@ export default function AddConversation() {
           </svg>
           {listening ? "Recording..." : "Hold to speak"}
         </button>
+        {showTextFallback && !listening && (
+          <button
+            onClick={() => {
+              setShowTextFallback(false);
+              setVoiceError("");
+            }}
+            className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50"
+          >
+            Type instead
+          </button>
+        )}
         <button
           onClick={onSave}
           disabled={!content || saving || (setReminder && !reminderDate)}
