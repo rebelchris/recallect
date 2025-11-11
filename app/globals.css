@@ -1,13 +1,58 @@
 @import "tailwindcss";
 
 :root {
+  /* Light mode colors */
   --background: #fafafa;
   --foreground: #171717;
+  --card: #ffffff;
+  --card-foreground: #171717;
+  --muted: #f5f5f5;
+  --muted-foreground: #737373;
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --primary: #FF6B6B;
+  --primary-foreground: #ffffff;
+  --secondary: #FF8C42;
+  --secondary-foreground: #ffffff;
+  --accent: #FFF5F0;
+  --accent-foreground: #171717;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    /* Dark mode colors */
+    --background: #0a0a0a;
+    --foreground: #ededed;
+    --card: #171717;
+    --card-foreground: #ededed;
+    --muted: #262626;
+    --muted-foreground: #a3a3a3;
+    --border: #404040;
+    --input: #262626;
+    --primary: #FF6B6B;
+    --primary-foreground: #ffffff;
+    --secondary: #FF8C42;
+    --secondary-foreground: #ffffff;
+    --accent: #2D1B13;
+    --accent-foreground: #ededed;
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -27,7 +72,7 @@ html {
 
 /* Focus visible styles for accessibility */
 *:focus-visible {
-  outline: 2px solid #FF8C42;
+  outline: 2px solid var(--secondary);
   outline-offset: 2px;
   border-radius: 0.25rem;
 }
@@ -78,8 +123,18 @@ a:hover {
   background: #9ca3af;
 }
 
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-thumb {
+    background: #404040;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #525252;
+  }
+}
+
 /* Selection styles */
 ::selection {
-  background-color: #FF8C42;
-  color: white;
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
 }

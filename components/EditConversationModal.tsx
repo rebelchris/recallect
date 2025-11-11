@@ -77,16 +77,16 @@ export default function EditConversationModal({
       onClose={handleClose}
       className="rounded-xl p-0 backdrop:bg-black/50 w-full max-w-md m-auto"
     >
-      <div className="bg-white rounded-xl">
+      <div className="bg-card rounded-xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-xl font-semibold text-gray-900">
+        <div className="flex items-center justify-between p-6 border-b border-border">
+          <h2 className="text-xl font-semibold">
             Edit Conversation
           </h2>
           <button
             onClick={handleClose}
             disabled={isSaving}
-            className="text-gray-400 hover:text-gray-600 disabled:opacity-50"
+            className="text-muted-foreground hover:text-foreground disabled:opacity-50"
           >
             <X className="w-6 h-6" />
           </button>
@@ -97,7 +97,7 @@ export default function EditConversationModal({
           <div>
             <label
               htmlFor="content"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium text-muted-foreground mb-2"
             >
               Conversation
             </label>
@@ -106,7 +106,7 @@ export default function EditConversationModal({
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={6}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF6B6B] focus:border-transparent resize-none"
+              className="w-full px-3 py-2 border border-border bg-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
               placeholder="What did you talk about?"
               disabled={isSaving}
             />
@@ -115,7 +115,7 @@ export default function EditConversationModal({
           <div>
             <label
               htmlFor="timestamp"
-              className="block text-sm font-medium text-gray-700 mb-2"
+              className="block text-sm font-medium text-muted-foreground mb-2"
             >
               Date & Time
             </label>
@@ -124,25 +124,25 @@ export default function EditConversationModal({
               id="timestamp"
               value={timestamp}
               onChange={(e) => setTimestamp(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF6B6B] focus:border-transparent"
+              className="w-full px-3 py-2 border border-border bg-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               disabled={isSaving}
             />
           </div>
         </div>
 
         {/* Actions */}
-        <div className="flex gap-3 p-6 border-t bg-gray-50 rounded-b-xl">
+        <div className="flex gap-3 p-6 border-t border-border bg-muted rounded-b-xl">
           <button
             onClick={handleClose}
             disabled={isSaving}
-            className="flex-1 px-4 py-2.5 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+            className="flex-1 px-4 py-2.5 bg-card border border-border rounded-lg hover:bg-muted transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={isSaving || !content.trim()}
-            className="flex-1 px-4 py-2.5 text-white bg-[#FF6B6B] rounded-lg hover:bg-[#FF5252] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 px-4 py-2.5 text-primary-foreground bg-primary rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSaving ? "Saving..." : "Save"}
           </button>

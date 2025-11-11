@@ -26,8 +26,8 @@ export default function GroupFilter({
         onClick={() => handleGroupChange("ALL")}
         className={`whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold shadow-sm transition-all ${
           selectedGroupId === "ALL"
-            ? "bg-[#FF6B6B] text-white shadow-md"
-            : "bg-white text-gray-700 hover:bg-gray-50 hover:shadow"
+            ? "bg-primary text-primary-foreground shadow-md"
+            : "bg-card hover:bg-muted hover:shadow"
         }`}
       >
         All
@@ -39,7 +39,7 @@ export default function GroupFilter({
           className={`whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold shadow-sm transition-all ${
             selectedGroupId === group.id
               ? "text-white shadow-md"
-              : "bg-white text-gray-700 hover:shadow"
+              : "bg-card hover:shadow"
           }`}
           style={
             selectedGroupId === group.id
@@ -53,7 +53,7 @@ export default function GroupFilter({
           }}
           onMouseLeave={(e) => {
             if (selectedGroupId !== group.id) {
-              e.currentTarget.style.backgroundColor = "white";
+              e.currentTarget.style.backgroundColor = "";
             }
           }}
         >

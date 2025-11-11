@@ -81,12 +81,12 @@ export default function PersonDetail() {
 
   if (loading) {
     return (
-      <div className="p-6 text-center text-gray-500">Loading...</div>
+      <div className="p-6 text-center text-muted-foreground">Loading...</div>
     );
   }
 
   if (!person) {
-    return <div className="p-6 text-center text-gray-500">Not found</div>;
+    return <div className="p-6 text-center text-muted-foreground">Not found</div>;
   }
 
   return (
@@ -96,7 +96,7 @@ export default function PersonDetail() {
           <div className="flex items-center gap-3">
             <Link
               href="/"
-              className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-[#FF6B6B] transition-colors hover:bg-red-50"
+              className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-accent"
             >
               ← Back
             </Link>
@@ -104,15 +104,15 @@ export default function PersonDetail() {
           </div>
           <Link
             href={`/person/${person.id}/edit`}
-            className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all hover:bg-gray-200 hover:shadow"
+            className="rounded-lg bg-muted px-4 py-2 text-sm font-medium shadow-sm transition-all hover:bg-muted/80 hover:shadow"
           >
             Edit
           </Link>
         </div>
-        <div className="mb-6 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100/50 p-4 text-sm font-medium text-gray-700">
-          <span className="text-gray-900">{conversations.length}</span>{" "}
+        <div className="mb-6 rounded-xl bg-muted p-4 text-sm font-medium text-muted-foreground">
+          <span className="text-foreground">{conversations.length}</span>{" "}
           conversations • Last talked:{" "}
-          <span className="text-gray-900">
+          <span className="text-foreground">
             {conversations[0]
               ? relativeTimeFrom(conversations[0].timestamp)
               : "—"}
@@ -122,7 +122,7 @@ export default function PersonDetail() {
         {/* Active Reminders */}
         {reminders.length > 0 && (
           <div className="mb-6">
-            <h2 className="mb-3 text-base font-semibold text-gray-800">
+            <h2 className="mb-3 text-base font-semibold">
               Active Reminders
             </h2>
             <ul className="space-y-3">
@@ -137,7 +137,7 @@ export default function PersonDetail() {
           </div>
         )}
 
-        <h2 className="mb-3 text-base font-semibold text-gray-800">
+        <h2 className="mb-3 text-base font-semibold">
           Conversations
         </h2>
         <ul className="space-y-3">

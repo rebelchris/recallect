@@ -88,9 +88,9 @@ export default function PullToRefresh({ children }: PullToRefreshProps) {
           opacity: pullDistance / triggerDistance,
         }}
       >
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-white shadow-lg">
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-card shadow-lg">
           <svg
-            className={`h-5 w-5 text-[#FF6B6B] ${isRefreshing ? "animate-spin" : ""}`}
+            className={`h-5 w-5 text-primary ${isRefreshing ? "animate-spin" : ""}`}
             style={{
               transform: `rotate(${pullDistance * 6}deg)`,
             }}

@@ -41,20 +41,20 @@ export default function ConversationItem({
 
   return (
     <>
-      <li className="rounded-2xl bg-white p-5 shadow-sm transition-all duration-200 hover:shadow-md group">
+      <li className="rounded-2xl bg-card p-5 shadow-sm transition-all duration-200 hover:shadow-md group">
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
-            <div className="mb-2 text-xs font-medium text-gray-500">
+            <div className="mb-2 text-xs font-medium text-muted-foreground">
               {relativeTime}
             </div>
-            <div className="whitespace-pre-wrap text-sm leading-relaxed text-gray-700">
+            <div className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">
               {conversation.content}
             </div>
           </div>
           <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
             <button
               onClick={() => onEdit(conversation)}
-              className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+              className="p-2 text-muted-foreground hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
               title="Edit conversation"
               aria-label="Edit conversation"
             >
@@ -62,7 +62,7 @@ export default function ConversationItem({
             </button>
             <button
               onClick={() => setShowDeleteDialog(true)}
-              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              className="p-2 text-muted-foreground hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
               title="Delete conversation"
               aria-label="Delete conversation"
             >

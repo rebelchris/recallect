@@ -32,10 +32,10 @@ export default function ReminderItem({ reminder, onUpdate }: ReminderItemProps) 
   };
 
   return (
-    <li className="rounded-2xl border-2 border-[#FF8C42] bg-gradient-to-br from-white to-orange-50/30 p-4 shadow-sm">
+    <li className="rounded-2xl border-2 border-secondary bg-accent p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="flex-1">
-          <div className="flex items-center gap-1.5 font-semibold text-[#FF6B6B]">
+          <div className="flex items-center gap-1.5 font-semibold text-primary">
             <svg
               className="h-4 w-4"
               fill="none"
@@ -58,7 +58,7 @@ export default function ReminderItem({ reminder, onUpdate }: ReminderItemProps) 
             </span>
           </div>
           {reminder.conversation && (
-            <div className="mt-2 text-sm leading-relaxed text-gray-700">
+            <div className="mt-2 text-sm leading-relaxed text-muted-foreground">
               {reminder.conversation.content.substring(0, 100)}
               {reminder.conversation.content.length > 100 && "..."}
             </div>
@@ -67,7 +67,7 @@ export default function ReminderItem({ reminder, onUpdate }: ReminderItemProps) 
         <button
           onClick={handleDismiss}
           disabled={isUpdating}
-          className="flex-shrink-0 rounded-lg p-2 text-gray-500 hover:bg-white hover:text-green-600 transition-colors disabled:opacity-50"
+          className="flex-shrink-0 rounded-lg p-2 text-muted-foreground hover:bg-card hover:text-green-600 transition-colors disabled:opacity-50"
           title="Mark as done"
         >
           <Check className="w-5 h-5" />
