@@ -246,14 +246,8 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
-      // Only stop if user manually stopped, otherwise restart
-      if (shouldStopRef.current) {
-        setListening(false);
-      } else {
-        // Auto-restart if it stopped unexpectedly
-        recognition.start();
-        resetTimeout();
-      }
+      // Always stop when recognition ends to avoid reprocessing audio
+      setListening(false);
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
@@ -312,12 +306,12 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
       <div className="flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border p-5">
-          <h2 className="text-xl font-bold tracking-tight">
+          <h2 className="text-xl font-bold tracking-tight text-foreground">
             {step === "select" ? "Quick Add" : selectedPerson?.name}
           </h2>
           <button
             onClick={handleClose}
-            className="rounded-full p-1.5 transition-colors hover:bg-muted active:bg-muted"
+            className="rounded-full p-1.5 text-foreground transition-colors hover:bg-muted active:bg-muted"
             aria-label="Close"
           >
             <X size={20} />
@@ -533,35 +527,24 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
                 </button>
 
                 <button
-                  onPointerDown={(e) => {
-                    e.preventDefault();
-                    startListening();
-                  }}
-                  onPointerUp={(e) => {
-                    e.preventDefault();
-                    stopListening();
-                  }}
-                  onPointerCancel={(e) => {
-                    e.preventDefault();
-                    stopListening();
-                  }}
-                  onPointerLeave={(e) => {
+                  onClick={() => {
                     if (listening) {
-                      e.preventDefault();
                       stopListening();
+                    } else {
+                      startListening();
                     }
                   }}
-                  className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all select-none touch-none ${
+                  className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
                     listening
-                      ? "border-2 border-primary bg-accent text-primary scale-95"
+                      ? "border-2 border-primary bg-accent text-primary"
                       : "border border-border text-foreground hover:bg-muted"
                   }`}
-                  aria-label="Press and hold to record voice"
-                  title="Press and hold to record voice"
+                  aria-label={listening ? "Stop recording" : "Start recording"}
+                  title={listening ? "Click to stop recording" : "Click to start recording"}
                 >
                   <Mic size={16} className={listening ? "animate-pulse" : ""} />
                   <span className="text-sm font-medium">
-                    {listening ? "Recording..." : "Hold to speak"}
+                    {listening ? "Stop recording" : "Start recording"}
                   </span>
                 </button>
 
