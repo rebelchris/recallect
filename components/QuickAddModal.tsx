@@ -246,14 +246,8 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
-      // Only stop if user manually stopped, otherwise restart
-      if (shouldStopRef.current) {
-        setListening(false);
-      } else {
-        // Auto-restart if it stopped unexpectedly
-        recognition.start();
-        resetTimeout();
-      }
+      // Always stop when recognition ends to avoid reprocessing audio
+      setListening(false);
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
@@ -312,12 +306,12 @@ export default function QuickAddModal({ isOpen, onClose, preselectedPersonId }: 
       <div className="flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between border-b border-border p-5">
-          <h2 className="text-xl font-bold tracking-tight">
+          <h2 className="text-xl font-bold tracking-tight text-foreground">
             {step === "select" ? "Quick Add" : selectedPerson?.name}
           </h2>
           <button
             onClick={handleClose}
-            className="rounded-full p-1.5 transition-colors hover:bg-muted active:bg-muted"
+            className="rounded-full p-1.5 text-foreground transition-colors hover:bg-muted active:bg-muted"
             aria-label="Close"
           >
             <X size={20} />

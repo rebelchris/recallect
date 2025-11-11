@@ -67,14 +67,8 @@ export default function AddConversation() {
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
-      // Only stop if user manually stopped, otherwise restart
-      if (shouldStopRef.current) {
-        setListening(false);
-      } else {
-        // Auto-restart if it stopped unexpectedly
-        recognition.start();
-        resetTimeout();
-      }
+      // Always stop when recognition ends to avoid reprocessing audio
+      setListening(false);
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
