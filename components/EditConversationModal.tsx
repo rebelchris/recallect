@@ -106,7 +106,7 @@ export default function EditConversationModal({
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={6}
-              className="w-full px-3 py-2 border border-border bg-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+              className="w-full px-3 py-2 border border-border bg-input text-foreground rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent resize-none placeholder:text-muted-foreground"
               placeholder="What did you talk about?"
               disabled={isSaving}
             />
@@ -124,7 +124,7 @@ export default function EditConversationModal({
               id="timestamp"
               value={timestamp}
               onChange={(e) => setTimestamp(e.target.value)}
-              className="w-full px-3 py-2 border border-border bg-input rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
+              className="w-full px-3 py-2 border border-border bg-input text-foreground rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
               disabled={isSaving}
             />
           </div>
@@ -135,7 +135,7 @@ export default function EditConversationModal({
           <button
             onClick={handleClose}
             disabled={isSaving}
-            className="flex-1 px-4 py-2.5 bg-card border border-border rounded-lg hover:bg-muted transition-colors disabled:opacity-50"
+            className="flex-1 px-4 py-2.5 bg-card border border-border text-foreground rounded-lg hover:bg-muted transition-colors disabled:opacity-50"
           >
             Cancel
           </button>
