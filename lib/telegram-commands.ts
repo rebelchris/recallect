@@ -2,6 +2,10 @@ import TelegramBot from "node-telegram-bot-api";
 import { db } from "@/db/drizzle";
 import { contacts, conversations } from "@/db/schema";
 import { eq } from "drizzle-orm";
+import {
+  registerStandupSubscriber,
+  sendStandupNow,
+} from "./telegram-standup";
 
 type ConversationType = typeof conversations.type.enumValues[number];
 
@@ -83,6 +87,14 @@ const pendingSelections = new Map<
   { contacts: MatchedContact[]; content: string; type: ConversationType }
 >();
 
+function trackSubscriber(msg: TelegramBot.Message): void {
+  if (msg.chat.type !== "private") return;
+
+  void registerStandupSubscriber(msg.chat.id).catch((err) => {
+    console.error("Telegram subscriber registration error:", err);
+  });
+}
+
 export function registerCommands(bot: TelegramBot) {
   // Register each command
   for (const [command, type] of Object.entries(COMMANDS)) {
@@ -102,6 +114,8 @@ export function registerCommands(bot: TelegramBot) {
 
   // Handle numbered selection for disambiguation
   bot.on("message", async (msg) => {
+    trackSubscriber(msg);
+
     if (!msg.text || msg.text.startsWith("/")) return;
 
     const pending = pendingSelections.get(msg.chat.id);
@@ -121,10 +135,13 @@ export function registerCommands(bot: TelegramBot) {
 
   // /help command
   bot.onText(/^\/help(?:@\w+)?$/, (msg) => {
+    trackSubscriber(msg);
+
     const lines = [
       "Available commands:",
       "",
       ...Object.keys(COMMANDS).map((cmd) => `/${cmd} [name] [content]`),
+      "/standup",
       "",
       "Example: /talked Bob Smith had a rough day",
     ];
@@ -133,10 +150,23 @@ export function registerCommands(bot: TelegramBot) {
 
   // /start command
   bot.onText(/^\/start(?:@\w+)?$/, (msg) => {
+    trackSubscriber(msg);
+
     bot.sendMessage(
       msg.chat.id,
-      "Recallect Bot ready! Use /help to see available commands."
+      "Recallect Bot ready! Use /help to see available commands. Daily standups are enabled after your first message."
     );
+  });
+
+  // /standup command
+  bot.onText(/^\/standup(?:@\w+)?$/, async (msg) => {
+    try {
+      trackSubscriber(msg);
+      await sendStandupNow(bot, msg.chat.id);
+    } catch (err) {
+      console.error("Telegram standup error:", err);
+      bot.sendMessage(msg.chat.id, "Failed to generate standup. Please try again.");
+    }
   });
 }
 

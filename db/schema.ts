@@ -179,3 +179,14 @@ export const importantDatesRelations = relations(importantDates, ({ one }) => ({
     references: [contacts.id],
   }),
 }));
+
+export const telegramSubscribers = sqliteTable("telegram_subscribers", {
+  chatId: text("chat_id").primaryKey(),
+  lastStandupAt: text("last_standup_at"),
+  createdAt: text("created_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+  updatedAt: text("updated_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+});

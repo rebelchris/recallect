@@ -29,10 +29,12 @@ Create/update `.env.local`:
 ```bash
 TELEGRAM_BOT_TOKEN=your_botfather_token
 WHATSAPP_AUTO_INIT=true
+TELEGRAM_STANDUP_TIME=08:00
 ```
 
 - `TELEGRAM_BOT_TOKEN` enables Telegram auto-connect on server boot.
 - `WHATSAPP_AUTO_INIT=true` makes the server auto-start WhatsApp on boot (session is reused from `data/.wwebjs_auth` after first QR scan).
+- `TELEGRAM_STANDUP_TIME` sets local daily standup send time in `HH:MM` (24h).
 
 ### 2) Create the local database on the Mac mini
 

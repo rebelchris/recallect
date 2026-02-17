@@ -127,7 +127,7 @@ export default function TelegramPage() {
           <div className="mb-6 rounded-2xl border-2 border-blue-200 bg-blue-50 p-4">
             <p className="text-sm font-medium text-blue-800">
               Bot is listening for commands. Send messages to @{botUsername} on
-              Telegram.
+              Telegram. Daily standups are sent at 08:00 by default.
             </p>
           </div>
 
@@ -158,6 +158,10 @@ export default function TelegramPage() {
               <li>
                 <code className="rounded bg-muted px-1.5 py-0.5">/met</code>{" "}
                 <span className="text-muted-foreground">— hangout</span>
+              </li>
+              <li>
+                <code className="rounded bg-muted px-1.5 py-0.5">/standup</code>{" "}
+                <span className="text-muted-foreground">— send today&apos;s standup now</span>
               </li>
             </ul>
             <div className="mt-4 rounded-lg bg-muted p-3 text-sm text-muted-foreground">
@@ -216,6 +220,10 @@ export default function TelegramPage() {
             <li>
               <code className="rounded bg-muted px-1.5 py-0.5">/met</code>{" "}
               <span className="text-muted-foreground">— hangout</span>
+            </li>
+            <li>
+              <code className="rounded bg-muted px-1.5 py-0.5">/standup</code>{" "}
+              <span className="text-muted-foreground">— send today&apos;s standup now</span>
             </li>
           </ul>
           <div className="mt-4 rounded-lg bg-muted p-3 text-sm text-muted-foreground">

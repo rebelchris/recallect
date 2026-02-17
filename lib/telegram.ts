@@ -1,5 +1,6 @@
 import TelegramBot from "node-telegram-bot-api";
 import { registerCommands } from "./telegram-commands";
+import { startStandupScheduler, stopStandupScheduler } from "./telegram-standup";
 
 export type TelegramStatus = "disconnected" | "connected";
 
@@ -47,6 +48,7 @@ export async function initTelegram(token: string): Promise<void> {
   state.status = "connected";
 
   registerCommands(bot);
+  startStandupScheduler(bot);
 
   console.log(`Telegram bot connected as @${state.botUsername}`);
 }
@@ -54,6 +56,7 @@ export async function initTelegram(token: string): Promise<void> {
 export async function destroyTelegram(): Promise<void> {
   const state = getState();
   if (state.bot) {
+    stopStandupScheduler();
     await state.bot.stopPolling();
     state.bot = null;
     state.botUsername = null;
