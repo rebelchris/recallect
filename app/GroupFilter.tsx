@@ -25,48 +25,43 @@ export default function GroupFilter({
   };
 
   return (
-    <div className="no-scrollbar -mx-6 flex gap-2 overflow-x-auto px-6 py-1">
+    <div className="no-scrollbar -mx-5 flex gap-2 overflow-x-auto px-5">
       <button
         onClick={() => handleGroupChange("ALL")}
-        className={`whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold shadow-sm transition-all ${
+        className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
           selectedGroupId === "ALL"
-            ? "bg-primary text-primary-foreground shadow-md"
-            : "bg-card hover:bg-muted hover:shadow"
+            ? "bg-foreground text-background"
+            : "bg-muted text-muted-foreground hover:bg-muted hover:text-foreground"
         }`}
       >
         All
       </button>
-      {groups.map((group) => (
-        <button
-          key={group.id}
-          onClick={() => handleGroupChange(group.id)}
-          className={`whitespace-nowrap rounded-full px-5 py-2 text-sm font-semibold shadow-sm transition-all ${
-            selectedGroupId === group.id
-              ? "text-white shadow-md"
-              : "bg-card hover:shadow"
-          }`}
-          style={
-            selectedGroupId === group.id
-              ? { backgroundColor: group.color || "#FF6B6B" }
-              : undefined
-          }
-          onMouseEnter={(e) => {
-            if (selectedGroupId !== group.id) {
-              e.currentTarget.style.backgroundColor = `${group.color || "#FF6B6B"}15`;
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (selectedGroupId !== group.id) {
-              e.currentTarget.style.backgroundColor = "";
-            }
-          }}
-        >
-          {group.name}
-          {group.contactCount !== undefined && group.contactCount > 0 && (
-            <span className="ml-1.5 opacity-70">{group.contactCount}</span>
-          )}
-        </button>
-      ))}
+      {groups.map((group) => {
+        const isSelected = selectedGroupId === group.id;
+        return (
+          <button
+            key={group.id}
+            onClick={() => handleGroupChange(group.id)}
+            className={`whitespace-nowrap rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
+              isSelected
+                ? "text-white"
+                : "text-muted-foreground hover:text-foreground"
+            }`}
+            style={{
+              backgroundColor: isSelected 
+                ? (group.color || "#64748b")
+                : "var(--muted)",
+            }}
+          >
+            {group.name}
+            {group.contactCount !== undefined && group.contactCount > 0 && (
+              <span className={`ml-1.5 ${isSelected ? "opacity-80" : "opacity-50"}`}>
+                {group.contactCount}
+              </span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }

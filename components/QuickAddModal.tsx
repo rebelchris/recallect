@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { X, Search, Plus, Mic } from "lucide-react";
+import { X, Search, Plus, Mic, ChevronLeft, Bell } from "lucide-react";
 import { calculateQuickReminderDate } from "@/lib/conversationHelpers";
+import { useVoiceRecognition } from "@/hooks/useVoiceRecognition";
 import InteractionTypeSelector from "./InteractionTypeSelector";
 import type { Contact, Group } from "@/types";
 import type { InteractionType } from "@/lib/constants";
@@ -14,6 +15,20 @@ interface QuickAddModalProps {
   preselectedPersonId?: string;
 }
 
+type ModalStep = "select" | "input";
+
+interface NewPersonState {
+  isCreating: boolean;
+  name: string;
+  groupIds: string[];
+}
+
+const INITIAL_NEW_PERSON: NewPersonState = {
+  isCreating: false,
+  name: "",
+  groupIds: [],
+};
+
 export default function QuickAddModal({
   isOpen,
   onClose,
@@ -23,30 +38,24 @@ export default function QuickAddModal({
   const dialogRef = useRef<HTMLDialogElement>(null);
 
   const [people, setPeople] = useState<Contact[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [loading, setLoading] = useState(false);
   const [groups, setGroups] = useState<Group[]>([]);
-
-  const [step, setStep] = useState<"select" | "input">("select");
+  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<ModalStep>("select");
   const [selectedPerson, setSelectedPerson] = useState<Contact | null>(null);
-
-  const [isCreatingNew, setIsCreatingNew] = useState(false);
-  const [newPersonName, setNewPersonName] = useState("");
-  const [newPersonGroupIds, setNewPersonGroupIds] = useState<string[]>([]);
-
+  const [searchQuery, setSearchQuery] = useState("");
+  const [newPerson, setNewPerson] = useState<NewPersonState>(INITIAL_NEW_PERSON);
   const [content, setContent] = useState("");
   const [type, setType] = useState<InteractionType>("other");
   const [saving, setSaving] = useState(false);
-
-  const [setReminder, setSetReminder] = useState(false);
+  const [reminderEnabled, setReminderEnabled] = useState(false);
   const [reminderDate, setReminderDate] = useState("");
 
-  const [listening, setListening] = useState(false);
-  const [voiceError, setVoiceError] = useState<string>("");
-  const [showTextFallback, setShowTextFallback] = useState(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const shouldStopRef = useRef(false);
-  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const handleTranscript = useCallback((transcript: string) => {
+    setContent((prev) => (prev ? `${prev} ${transcript}` : transcript));
+  }, []);
+
+  const { isListening, error: voiceError, toggle: toggleVoice, stop: stopVoice } = 
+    useVoiceRecognition({ onTranscript: handleTranscript });
 
   useEffect(() => {
     if (isOpen) {
@@ -91,51 +100,39 @@ export default function QuickAddModal({
     }
   }
 
-  function handleClose() {
+  function resetModal() {
     setStep("select");
     setSelectedPerson(null);
-    setIsCreatingNew(false);
-    setNewPersonName("");
-    setNewPersonGroupIds([]);
+    setNewPerson(INITIAL_NEW_PERSON);
     setContent("");
     setType("other");
     setSearchQuery("");
-    setSetReminder(false);
+    setReminderEnabled(false);
     setReminderDate("");
-    setVoiceError("");
-    setShowTextFallback(false);
-    stopListening();
+    stopVoice();
+  }
+
+  function handleClose() {
+    resetModal();
     onClose();
   }
 
-  function setQuickReminder(days: number) {
-    setReminderDate(calculateQuickReminderDate(days));
-  }
-
-  function handleSelectPerson(person: Contact) {
-    setSelectedPerson(person);
-    setStep("input");
-  }
-
   async function handleCreateNewPerson() {
-    if (!newPersonName.trim()) return;
+    if (!newPerson.name.trim()) return;
     setSaving(true);
     try {
       const res = await fetch("/api/contacts", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: newPersonName.trim(),
-          groupIds:
-            newPersonGroupIds.length > 0 ? newPersonGroupIds : undefined,
+          name: newPerson.name.trim(),
+          groupIds: newPerson.groupIds.length > 0 ? newPerson.groupIds : undefined,
         }),
       });
       if (res.ok) {
-        const newPerson = await res.json();
-        setSelectedPerson(newPerson);
-        setIsCreatingNew(false);
-        setNewPersonName("");
-        setNewPersonGroupIds([]);
+        const created = await res.json();
+        setSelectedPerson(created);
+        setNewPerson(INITIAL_NEW_PERSON);
         setStep("input");
       }
     } finally {
@@ -150,15 +147,11 @@ export default function QuickAddModal({
       const res = await fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contactId: selectedPerson.id,
-          content: content.trim(),
-          type,
-        }),
+        body: JSON.stringify({ contactId: selectedPerson.id, content: content.trim(), type }),
       });
       if (res.ok) {
         const conversation = await res.json();
-        if (setReminder && reminderDate && conversation.id) {
+        if (reminderEnabled && reminderDate && conversation.id) {
           await fetch("/api/reminders", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -177,80 +170,6 @@ export default function QuickAddModal({
     }
   }
 
-  function startListening() {
-    const SpeechRecognitionAPI =
-      (
-        window as typeof window & {
-          SpeechRecognition?: new () => SpeechRecognition;
-          webkitSpeechRecognition?: new () => SpeechRecognition;
-        }
-      ).SpeechRecognition ||
-      (
-        window as typeof window & {
-          SpeechRecognition?: new () => SpeechRecognition;
-          webkitSpeechRecognition?: new () => SpeechRecognition;
-        }
-      ).webkitSpeechRecognition;
-    if (!SpeechRecognitionAPI) {
-      setVoiceError("Voice recognition is not supported.");
-      setShowTextFallback(true);
-      return;
-    }
-
-    shouldStopRef.current = false;
-    setVoiceError("");
-    const recognition = new SpeechRecognitionAPI();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
-
-    const resetTimeout = () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      timeoutRef.current = setTimeout(() => stopListening(), 30000);
-    };
-
-    recognition.onresult = (e: SpeechRecognitionEvent) => {
-      let finalTranscript = "";
-      resetTimeout();
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        if (e.results[i].isFinal) {
-          finalTranscript += e.results[i][0].transcript + " ";
-        }
-      }
-      if (finalTranscript) {
-        setContent((prev) =>
-          (prev ? prev + " " : "") + finalTranscript.trim()
-        );
-      }
-    };
-
-    recognition.onend = () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      setListening(false);
-    };
-
-    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      if (event.error !== "aborted") {
-        setVoiceError(`Voice error: ${event.error}`);
-        setShowTextFallback(true);
-      }
-      setListening(false);
-    };
-
-    recognition.start();
-    recognitionRef.current = recognition;
-    setListening(true);
-    resetTimeout();
-  }
-
-  function stopListening() {
-    shouldStopRef.current = true;
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
-    recognitionRef.current?.stop();
-    setListening(false);
-  }
-
   const filteredPeople = people.filter((p) =>
     p.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -259,98 +178,104 @@ export default function QuickAddModal({
     <dialog
       ref={dialogRef}
       onClose={handleClose}
-      className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-3xl bg-card p-0 shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm"
-      style={{ width: "min(90vw, 420px)", maxHeight: "85vh", margin: 0 }}
+      className="fixed inset-0 m-0 h-full max-h-full w-full max-w-full bg-background p-0 sm:inset-auto sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[85vh] sm:w-full sm:max-w-md sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl sm:border sm:border-border sm:shadow-xl backdrop:bg-black/40 backdrop:backdrop-blur-sm"
     >
-      <div className="flex flex-col">
-        <div className="flex items-center justify-between border-b border-border p-5">
-          <h2 className="text-xl font-bold tracking-tight text-foreground">
-            {step === "select" ? "Quick Add" : selectedPerson?.name}
-          </h2>
+      <div className="flex h-full flex-col sm:h-auto">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-border px-4 py-4 sm:px-6">
+          {step === "input" ? (
+            <button
+              onClick={() => setStep("select")}
+              className="flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+            >
+              <ChevronLeft size={18} />
+              Back
+            </button>
+          ) : (
+            <h2 className="text-lg font-semibold">New interaction</h2>
+          )}
+          {step === "input" && (
+            <h2 className="absolute left-1/2 -translate-x-1/2 text-lg font-semibold">
+              {selectedPerson?.name}
+            </h2>
+          )}
           <button
             onClick={handleClose}
-            className="rounded-full p-1.5 text-foreground transition-colors hover:bg-muted active:bg-muted"
-            aria-label="Close"
+            className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
-        <div className="overflow-y-auto p-5">
+        {/* Content */}
+        <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
           {step === "select" ? (
             <>
-              <div className="mb-4 flex items-center gap-3 rounded-xl border border-border bg-input px-4 py-3 transition-colors focus-within:border-secondary focus-within:bg-card">
-                <Search size={18} className="text-muted-foreground" />
+              {/* Search */}
+              <div className="relative mb-4">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="Search contacts..."
+                  placeholder="Search..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="flex-1 bg-transparent text-foreground outline-none placeholder:text-muted-foreground"
+                  className="w-full rounded-lg border border-border bg-background py-2.5 pl-9 pr-4 text-sm placeholder:text-muted-foreground/60 focus:border-foreground/20 focus:outline-none"
                   autoFocus
                 />
               </div>
 
-              {isCreatingNew ? (
-                <div className="mb-4 rounded-xl border-2 border-secondary bg-accent p-4">
+              {/* Create new */}
+              {newPerson.isCreating ? (
+                <div className="mb-4 rounded-xl border border-border bg-muted/50 p-4">
                   <input
                     type="text"
-                    placeholder="Enter contact's name..."
-                    value={newPersonName}
-                    onChange={(e) => setNewPersonName(e.target.value)}
+                    placeholder="Name..."
+                    value={newPerson.name}
+                    onChange={(e) => setNewPerson({ ...newPerson, name: e.target.value })}
                     onKeyDown={(e) => {
                       if (e.key === "Enter") handleCreateNewPerson();
-                      if (e.key === "Escape") {
-                        setIsCreatingNew(false);
-                        setNewPersonName("");
-                        setNewPersonGroupIds([]);
-                      }
+                      if (e.key === "Escape") setNewPerson(INITIAL_NEW_PERSON);
                     }}
-                    className="w-full rounded border-none bg-transparent text-base text-foreground outline-none placeholder:text-muted-foreground"
+                    className="w-full bg-transparent text-sm font-medium placeholder:text-muted-foreground focus:outline-none"
                     autoFocus
                   />
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {groups.map((group) => (
-                      <button
-                        key={group.id}
-                        type="button"
-                        onClick={() =>
-                          setNewPersonGroupIds((prev) =>
-                            prev.includes(group.id)
-                              ? prev.filter((id) => id !== group.id)
-                              : [...prev, group.id]
-                          )
-                        }
-                        className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${
-                          newPersonGroupIds.includes(group.id)
-                            ? "text-white"
-                            : "bg-card border border-border"
-                        }`}
-                        style={
-                          newPersonGroupIds.includes(group.id)
-                            ? { backgroundColor: group.color || "#FF6B6B" }
-                            : undefined
-                        }
-                      >
-                        {group.name}
-                      </button>
-                    ))}
-                  </div>
-                  <div className="mt-3 flex gap-2">
+                  {groups.length > 0 && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {groups.map((group) => (
+                        <button
+                          key={group.id}
+                          type="button"
+                          onClick={() => setNewPerson((prev) => ({
+                            ...prev,
+                            groupIds: prev.groupIds.includes(group.id)
+                              ? prev.groupIds.filter((id) => id !== group.id)
+                              : [...prev.groupIds, group.id],
+                          }))}
+                          className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                            newPerson.groupIds.includes(group.id) ? "text-white" : "bg-background"
+                          }`}
+                          style={
+                            newPerson.groupIds.includes(group.id)
+                              ? { backgroundColor: group.color || "#64748b" }
+                              : undefined
+                          }
+                        >
+                          {group.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  <div className="mt-4 flex gap-2">
                     <button
                       onClick={handleCreateNewPerson}
-                      disabled={!newPersonName.trim() || saving}
-                      className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
+                      disabled={!newPerson.name.trim() || saving}
+                      className="rounded-lg bg-foreground px-4 py-2 text-sm font-medium text-background transition-opacity disabled:opacity-50"
                     >
                       {saving ? "Creating..." : "Create"}
                     </button>
                     <button
-                      onClick={() => {
-                        setIsCreatingNew(false);
-                        setNewPersonName("");
-                        setNewPersonGroupIds([]);
-                      }}
-                      className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                      onClick={() => setNewPerson(INITIAL_NEW_PERSON)}
+                      className="rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
                     >
                       Cancel
                     </button>
@@ -358,124 +283,119 @@ export default function QuickAddModal({
                 </div>
               ) : (
                 <button
-                  onClick={() => setIsCreatingNew(true)}
-                  className="mb-4 flex w-full items-center gap-2.5 rounded-xl border-2 border-dashed border-border p-4 text-foreground transition-all hover:border-secondary hover:bg-accent"
+                  onClick={() => setNewPerson({ ...newPerson, isCreating: true })}
+                  className="mb-4 flex w-full items-center gap-2 rounded-xl border border-dashed border-border p-4 text-sm font-medium text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground"
                 >
-                  <Plus size={20} className="text-primary" />
-                  <span className="text-sm font-semibold">
-                    Create new contact
-                  </span>
+                  <Plus size={18} />
+                  New contact
                 </button>
               )}
 
+              {/* People list */}
               {loading ? (
-                <div className="py-12 text-center text-sm text-muted-foreground">
-                  Loading...
-                </div>
+                <div className="py-12 text-center text-sm text-muted-foreground">Loading...</div>
               ) : filteredPeople.length === 0 ? (
                 <div className="py-12 text-center text-sm text-muted-foreground">
-                  {searchQuery ? "No contacts found" : "No contacts yet"}
+                  {searchQuery ? "No results" : "No contacts yet"}
                 </div>
               ) : (
-                <ul className="space-y-2">
+                <div className="space-y-1">
                   {filteredPeople.map((person) => (
-                    <li key={person.id}>
-                      <button
-                        onClick={() => handleSelectPerson(person)}
-                        className="w-full rounded-xl p-4 text-left text-foreground transition-all hover:bg-muted active:bg-muted"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="font-semibold">
-                            {person.name}
-                            {person.lastName ? ` ${person.lastName}` : ""}
-                          </div>
-                          {person.groups && person.groups.length > 0 && (
-                            <div className="flex gap-1">
-                              {person.groups.slice(0, 2).map((group) => (
-                                <span
-                                  key={group.id}
-                                  className="rounded-full px-2.5 py-1 text-xs font-medium"
-                                  style={{
-                                    backgroundColor: group.color
-                                      ? `${group.color}20`
-                                      : "#FF6B6B20",
-                                    color: group.color || "#FF6B6B",
-                                  }}
-                                >
-                                  {group.name}
-                                </span>
-                              ))}
-                            </div>
-                          )}
+                    <button
+                      key={person.id}
+                      onClick={() => {
+                        setSelectedPerson(person);
+                        setStep("input");
+                      }}
+                      className="flex w-full items-center justify-between rounded-lg px-3 py-3 text-left transition-colors hover:bg-muted"
+                    >
+                      <span className="font-medium">
+                        {person.name}
+                        {person.lastName ? ` ${person.lastName}` : ""}
+                      </span>
+                      {person.groups && person.groups.length > 0 && (
+                        <div className="flex gap-1">
+                          {person.groups.slice(0, 2).map((g) => (
+                            <span
+                              key={g.id}
+                              className="rounded-md px-2 py-0.5 text-xs font-medium"
+                              style={{
+                                backgroundColor: `${g.color || "#64748b"}15`,
+                                color: g.color || "#64748b",
+                              }}
+                            >
+                              {g.name}
+                            </span>
+                          ))}
                         </div>
-                      </button>
-                    </li>
+                      )}
+                    </button>
                   ))}
-                </ul>
+                </div>
               )}
             </>
           ) : (
             <>
-              {/* Interaction Type */}
-              <div className="mb-4">
-                <label className="mb-2 block text-sm font-medium text-muted-foreground">
+              {/* Type selector */}
+              <div className="mb-5">
+                <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Type
                 </label>
                 <InteractionTypeSelector value={type} onChange={setType} />
               </div>
 
-              <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="What did you talk about?"
-                className="mb-4 h-36 w-full resize-none rounded-xl border border-border bg-input p-4 text-base text-foreground outline-none transition-colors focus:border-secondary focus:bg-card placeholder:text-muted-foreground"
-                autoFocus
-              />
+              {/* Content */}
+              <div className="mb-5">
+                <label className="mb-2 block text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Notes
+                </label>
+                <textarea
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  placeholder="What did you talk about?"
+                  className="h-32 w-full resize-none rounded-lg border border-border bg-background p-3 text-sm placeholder:text-muted-foreground/60 focus:border-foreground/20 focus:outline-none"
+                  autoFocus
+                />
+              </div>
 
+              {/* Voice */}
               {voiceError && (
-                <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-                  {voiceError}
-                </div>
+                <p className="mb-4 text-sm text-danger">{voiceError}</p>
               )}
-
-              {listening && (
-                <div className="mb-4 flex items-center gap-3 rounded-lg border-2 border-primary bg-accent p-4">
-                  <div className="relative flex h-4 w-4 items-center justify-center">
-                    <div className="absolute h-4 w-4 animate-ping rounded-full bg-primary opacity-75"></div>
-                    <div className="relative h-4 w-4 rounded-full bg-primary"></div>
-                  </div>
-                  <span className="font-semibold text-primary">
-                    Listening...
+              {isListening && (
+                <div className="mb-4 flex items-center gap-2 text-sm font-medium text-foreground">
+                  <span className="relative flex h-2 w-2">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-danger opacity-75" />
+                    <span className="relative inline-flex h-2 w-2 rounded-full bg-danger" />
                   </span>
+                  Listening...
                 </div>
               )}
 
               {/* Reminder */}
-              <div className="mb-4 rounded-xl border border-border bg-muted p-4">
-                <label className="flex cursor-pointer items-center gap-2.5 text-foreground">
+              <div className="mb-5 rounded-lg border border-border p-4">
+                <label className="flex cursor-pointer items-center gap-2.5">
                   <input
                     type="checkbox"
-                    checked={setReminder}
-                    onChange={(e) => setSetReminder(e.target.checked)}
-                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                    checked={reminderEnabled}
+                    onChange={(e) => setReminderEnabled(e.target.checked)}
+                    className="h-4 w-4 rounded border-border"
                   />
-                  <span className="text-sm font-semibold">
-                    Remind me about this
-                  </span>
+                  <Bell size={14} className="text-muted-foreground" />
+                  <span className="text-sm font-medium">Set reminder</span>
                 </label>
-
-                {setReminder && (
+                {reminderEnabled && (
                   <div className="mt-4 space-y-3">
                     <div className="flex flex-wrap gap-2">
                       {[
-                        { label: "In 1 week", days: 7 },
-                        { label: "In 2 weeks", days: 14 },
-                        { label: "In 1 month", days: 30 },
+                        { label: "1 week", days: 7 },
+                        { label: "2 weeks", days: 14 },
+                        { label: "1 month", days: 30 },
                       ].map(({ label, days }) => (
                         <button
                           key={days}
-                          onClick={() => setQuickReminder(days)}
-                          className="rounded-lg border border-border bg-card px-3.5 py-2 text-sm font-medium text-foreground transition-colors hover:border-secondary hover:bg-accent"
+                          onClick={() => setReminderDate(calculateQuickReminderDate(days))}
+                          className="rounded-md border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
                         >
                           {label}
                         </button>
@@ -485,7 +405,7 @@ export default function QuickAddModal({
                       type="datetime-local"
                       value={reminderDate}
                       onChange={(e) => setReminderDate(e.target.value)}
-                      className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-secondary"
+                      className="w-full rounded-md border border-border px-3 py-2 text-sm focus:border-foreground/20 focus:outline-none"
                     />
                   </div>
                 )}
@@ -494,41 +414,20 @@ export default function QuickAddModal({
               {/* Actions */}
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => setStep("select")}
-                  className="rounded-lg border border-border px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-                >
-                  Back
-                </button>
-
-                <button
-                  onClick={() => {
-                    if (listening) stopListening();
-                    else startListening();
-                  }}
-                  className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium transition-all ${
-                    listening
-                      ? "border-2 border-primary bg-accent text-primary"
-                      : "border border-border text-foreground hover:bg-muted"
+                  onClick={toggleVoice}
+                  className={`flex items-center gap-2 rounded-lg border px-4 py-2.5 text-sm font-medium transition-colors ${
+                    isListening
+                      ? "border-danger bg-danger/10 text-danger"
+                      : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
                   }`}
-                  aria-label={listening ? "Stop recording" : "Start recording"}
                 >
-                  <Mic
-                    size={16}
-                    className={listening ? "animate-pulse" : ""}
-                  />
-                  <span className="text-sm font-medium">
-                    {listening ? "Stop" : "Record"}
-                  </span>
+                  <Mic size={16} className={isListening ? "animate-pulse" : ""} />
+                  {isListening ? "Stop" : "Record"}
                 </button>
-
                 <button
                   onClick={handleSaveConversation}
-                  disabled={
-                    !content.trim() ||
-                    saving ||
-                    (setReminder && !reminderDate)
-                  }
-                  className="ml-auto rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-60"
+                  disabled={!content.trim() || saving || (reminderEnabled && !reminderDate)}
+                  className="ml-auto rounded-lg bg-foreground px-5 py-2.5 text-sm font-medium text-background transition-opacity disabled:opacity-50"
                 >
                   {saving ? "Saving..." : "Save"}
                 </button>
