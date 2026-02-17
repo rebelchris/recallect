@@ -1,116 +1,75 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSessionOrMock } from "@/lib/serverAuth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db/drizzle";
+import { reminders, conversations } from "@/db/schema";
+import { eq, and, gte, desc } from "drizzle-orm";
 
-// GET /api/reminders - Get all reminders for the current user
 export async function GET(request: NextRequest) {
-  try {
-    const session = await getServerSessionOrMock();
+  const { searchParams } = new URL(request.url);
+  const status = searchParams.get("status");
+  const contactId = searchParams.get("contactId");
 
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { searchParams } = new URL(request.url);
-    const status = searchParams.get("status");
-    const personId = searchParams.get("personId");
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    const reminders = await prisma.reminder.findMany({
-      where: {
-        userId: user.id,
-        ...(status && { status: status as "PENDING" | "SENT" | "DISMISSED" }),
-        ...(personId && { personId }),
-      },
-      include: {
-        person: true,
-        conversation: true,
-      },
-      orderBy: {
-        remindAt: "asc",
-      },
-    });
-
-    return NextResponse.json(reminders);
-  } catch (error) {
-    console.error("Error fetching reminders:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch reminders" },
-      { status: 500 }
+  let where;
+  if (status && contactId) {
+    where = and(
+      eq(reminders.status, status as "PENDING" | "SENT" | "DISMISSED"),
+      eq(reminders.contactId, contactId)
     );
+  } else if (status) {
+    where = eq(reminders.status, status as "PENDING" | "SENT" | "DISMISSED");
+  } else if (contactId) {
+    where = eq(reminders.contactId, contactId);
   }
+
+  const result = await db.query.reminders.findMany({
+    where,
+    with: {
+      contact: true,
+      conversation: true,
+    },
+    orderBy: [reminders.remindAt],
+  });
+
+  return NextResponse.json(result);
 }
 
-// POST /api/reminders - Create a new reminder
 export async function POST(request: NextRequest) {
-  try {
-    const session = await getServerSessionOrMock();
+  const body = await request.json();
+  const { conversationId, contactId, remindAt } = body;
 
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const body = await request.json();
-    const { conversationId, personId, remindAt } = body;
-
-    if (!conversationId || !personId || !remindAt) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    // Verify the conversation belongs to the user
-    const conversation = await prisma.conversation.findFirst({
-      where: {
-        id: conversationId,
-        person: {
-          userId: user.id,
-        },
-      },
-    });
-
-    if (!conversation) {
-      return NextResponse.json(
-        { error: "Conversation not found" },
-        { status: 404 }
-      );
-    }
-
-    const reminder = await prisma.reminder.create({
-      data: {
-        userId: user.id,
-        personId,
-        conversationId,
-        remindAt: new Date(remindAt),
-      },
-      include: {
-        person: true,
-        conversation: true,
-      },
-    });
-
-    return NextResponse.json(reminder, { status: 201 });
-  } catch (error) {
-    console.error("Error creating reminder:", error);
+  if (!conversationId || !contactId || !remindAt) {
     return NextResponse.json(
-      { error: "Failed to create reminder" },
-      { status: 500 }
+      { error: "Missing required fields" },
+      { status: 400 }
     );
   }
+
+  const conversation = await db.query.conversations.findFirst({
+    where: eq(conversations.id, conversationId),
+  });
+
+  if (!conversation) {
+    return NextResponse.json(
+      { error: "Conversation not found" },
+      { status: 404 }
+    );
+  }
+
+  const [reminder] = await db
+    .insert(reminders)
+    .values({
+      contactId,
+      conversationId,
+      remindAt: new Date(remindAt).toISOString(),
+    })
+    .returning();
+
+  const result = await db.query.reminders.findFirst({
+    where: eq(reminders.id, reminder.id),
+    with: {
+      contact: true,
+      conversation: true,
+    },
+  });
+
+  return NextResponse.json(result, { status: 201 });
 }

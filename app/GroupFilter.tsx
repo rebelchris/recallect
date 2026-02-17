@@ -3,11 +3,15 @@
 import { useRouter } from "next/navigation";
 import type { Group } from "@/types";
 
+interface GroupWithCount extends Group {
+  contactCount?: number;
+}
+
 export default function GroupFilter({
   groups,
   selectedGroupId,
 }: {
-  groups: Group[];
+  groups: GroupWithCount[];
   selectedGroupId: string;
 }) {
   const router = useRouter();
@@ -58,6 +62,9 @@ export default function GroupFilter({
           }}
         >
           {group.name}
+          {group.contactCount !== undefined && group.contactCount > 0 && (
+            <span className="ml-1.5 opacity-70">{group.contactCount}</span>
+          )}
         </button>
       ))}
     </div>

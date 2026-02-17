@@ -3,11 +3,14 @@
 import { useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { calculateQuickReminderDate } from "@/lib/conversationHelpers";
+import InteractionTypeSelector from "@/components/InteractionTypeSelector";
+import type { InteractionType } from "@/lib/constants";
 
 export default function AddConversation() {
-    const {id} = useParams()
+  const { id } = useParams();
   const router = useRouter();
   const [content, setContent] = useState("");
+  const [type, setType] = useState<InteractionType>("other");
   const [saving, setSaving] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const shouldStopRef = useRef(false);
@@ -19,9 +22,23 @@ export default function AddConversation() {
   const [reminderDate, setReminderDate] = useState("");
 
   function startListening() {
-    const SpeechRecognitionAPI = (window as typeof window & { SpeechRecognition?: new () => SpeechRecognition; webkitSpeechRecognition?: new () => SpeechRecognition }).SpeechRecognition || (window as typeof window & { SpeechRecognition?: new () => SpeechRecognition; webkitSpeechRecognition?: new () => SpeechRecognition }).webkitSpeechRecognition;
+    const SpeechRecognitionAPI =
+      (
+        window as typeof window & {
+          SpeechRecognition?: new () => SpeechRecognition;
+          webkitSpeechRecognition?: new () => SpeechRecognition;
+        }
+      ).SpeechRecognition ||
+      (
+        window as typeof window & {
+          SpeechRecognition?: new () => SpeechRecognition;
+          webkitSpeechRecognition?: new () => SpeechRecognition;
+        }
+      ).webkitSpeechRecognition;
     if (!SpeechRecognitionAPI) {
-      setVoiceError("Voice recognition is not supported in your browser. Please type instead.");
+      setVoiceError(
+        "Voice recognition is not supported in your browser. Please type instead."
+      );
       setShowTextFallback(true);
       return;
     }
@@ -33,68 +50,48 @@ export default function AddConversation() {
     recognition.interimResults = true;
     recognition.lang = "en-US";
 
-    // Auto-stop after 30 seconds of silence
     const resetTimeout = () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      timeoutRef.current = setTimeout(() => {
-        stopListening();
-      }, 30000);
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      timeoutRef.current = setTimeout(() => stopListening(), 30000);
     };
 
     recognition.onresult = (e: SpeechRecognitionEvent) => {
       let finalTranscript = "";
-
-      // Reset the 30-second timeout on every result
       resetTimeout();
-
-      // Only process final results to avoid duplicates
       for (let i = e.resultIndex; i < e.results.length; i++) {
         if (e.results[i].isFinal) {
           finalTranscript += e.results[i][0].transcript + " ";
         }
       }
-
-      // Only update if we have final results
       if (finalTranscript) {
-        setContent((prev) => (prev ? prev + " " : "") + finalTranscript.trim());
+        setContent((prev) =>
+          (prev ? prev + " " : "") + finalTranscript.trim()
+        );
       }
     };
 
     recognition.onend = () => {
-      // Clean up timeout
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      // Always stop when recognition ends to avoid reprocessing audio
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
       setListening(false);
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      // Clean up timeout
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-
-      // Handle different error types with user-friendly messages
-      if (event.error === 'no-speech') {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (event.error === "no-speech") {
         setVoiceError("No speech detected. Try again?");
         setShowTextFallback(true);
-      } else if (event.error === 'not-allowed') {
-        setVoiceError("Microphone access denied. Please check your browser settings and allow microphone access.");
+      } else if (event.error === "not-allowed") {
+        setVoiceError("Microphone access denied.");
         setShowTextFallback(true);
-      } else if (event.error === 'network') {
-        setVoiceError("Network error. Please check your connection and try again.");
+      } else if (event.error === "network") {
+        setVoiceError("Network error.");
         setShowTextFallback(true);
-      } else if (event.error === 'aborted') {
-        // Just stop, don't show error for user-initiated stops
+      } else if (event.error === "aborted") {
         return;
       } else {
-        setVoiceError(`Voice recognition error: ${event.error}. Try typing instead.`);
+        setVoiceError(`Voice recognition error: ${event.error}`);
         setShowTextFallback(true);
       }
-
       setListening(false);
     };
 
@@ -106,9 +103,7 @@ export default function AddConversation() {
 
   function stopListening() {
     shouldStopRef.current = true;
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
+    if (timeoutRef.current) clearTimeout(timeoutRef.current);
     recognitionRef.current?.stop();
     setListening(false);
   }
@@ -120,11 +115,10 @@ export default function AddConversation() {
   async function onSave() {
     setSaving(true);
     try {
-      // Create the conversation
       const response = await fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ personId: id, content }),
+        body: JSON.stringify({ contactId: id, content, type }),
       });
 
       if (!response.ok) {
@@ -134,24 +128,18 @@ export default function AddConversation() {
 
       const conversation = await response.json();
 
-      // Create the reminder if enabled
       if (setReminder && reminderDate && conversation.id) {
-        const reminderResponse = await fetch("/api/reminders", {
+        await fetch("/api/reminders", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             conversationId: conversation.id,
-            personId: id,
+            contactId: id,
             remindAt: reminderDate,
           }),
         });
-
-        if (!reminderResponse.ok) {
-          console.error("Failed to create reminder");
-        }
       }
 
-      // Use back() to return to the previous page, which will trigger a fresh fetch
       router.back();
     } finally {
       setSaving(false);
@@ -160,68 +148,73 @@ export default function AddConversation() {
 
   return (
     <main className="mx-auto max-w-md p-6 pb-24">
-      <h1 className="mb-5 text-2xl font-bold tracking-tight">Add Conversation</h1>
+      <h1 className="mb-5 text-2xl font-bold tracking-tight">
+        Log Interaction
+      </h1>
+
+      {/* Interaction Type */}
+      <div className="mb-4">
+        <label className="mb-2 block text-sm font-medium text-muted-foreground">
+          Type
+        </label>
+        <InteractionTypeSelector value={type} onChange={setType} />
+      </div>
+
       <textarea
         value={content}
         onChange={(e) => setContent(e.target.value)}
         placeholder="What did you talk about?"
-        className="h-52 w-full resize-none rounded-xl border border-gray-200 bg-gray-50/50 p-4 text-base outline-none transition-colors focus:border-[#FF8C42] focus:bg-white focus:shadow-sm"
+        className="h-52 w-full resize-none rounded-xl border border-border bg-input p-4 text-base text-foreground outline-none transition-colors focus:border-secondary focus:bg-card focus:shadow-sm placeholder:text-muted-foreground"
       />
 
       {/* Reminder Section */}
-      <div className="mt-5 rounded-xl border border-gray-200 bg-gray-50/30 p-4">
+      <div className="mt-5 rounded-xl border border-border bg-muted p-4">
         <label className="flex cursor-pointer items-center gap-2.5">
           <input
             type="checkbox"
             checked={setReminder}
             onChange={(e) => setSetReminder(e.target.checked)}
-            className="h-4 w-4 rounded border-gray-300 text-[#FF6B6B] focus:ring-[#FF6B6B]"
+            className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
           />
-          <span className="text-sm font-semibold text-gray-800">Remind me about this</span>
+          <span className="text-sm font-semibold text-foreground">
+            Remind me about this
+          </span>
         </label>
 
         {setReminder && (
           <div className="mt-4 space-y-3">
             <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setQuickReminder(7)}
-                className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium transition-colors hover:border-[#FF8C42] hover:bg-orange-50"
-              >
-                In 1 week
-              </button>
-              <button
-                onClick={() => setQuickReminder(14)}
-                className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium transition-colors hover:border-[#FF8C42] hover:bg-orange-50"
-              >
-                In 2 weeks
-              </button>
-              <button
-                onClick={() => setQuickReminder(21)}
-                className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium transition-colors hover:border-[#FF8C42] hover:bg-orange-50"
-              >
-                In 3 weeks
-              </button>
-              <button
-                onClick={() => setQuickReminder(30)}
-                className="rounded-lg border border-gray-200 bg-white px-3.5 py-2 text-sm font-medium transition-colors hover:border-[#FF8C42] hover:bg-orange-50"
-              >
-                In 1 month
-              </button>
+              {[
+                { label: "In 1 week", days: 7 },
+                { label: "In 2 weeks", days: 14 },
+                { label: "In 3 weeks", days: 21 },
+                { label: "In 1 month", days: 30 },
+              ].map(({ label, days }) => (
+                <button
+                  key={days}
+                  onClick={() => setQuickReminder(days)}
+                  className="rounded-lg border border-border bg-card px-3.5 py-2 text-sm font-medium text-foreground transition-colors hover:border-secondary hover:bg-accent"
+                >
+                  {label}
+                </button>
+              ))}
             </div>
             <div>
-              <label className="mb-1.5 block text-xs font-medium text-gray-600">Or pick a specific date:</label>
+              <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
+                Or pick a specific date:
+              </label>
               <input
                 type="datetime-local"
                 value={reminderDate}
                 onChange={(e) => setReminderDate(e.target.value)}
-                className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none transition-colors focus:border-[#FF8C42] focus:shadow-sm"
+                className="w-full rounded-lg border border-border bg-card px-3 py-2.5 text-sm text-foreground outline-none transition-colors focus:border-secondary"
               />
             </div>
           </div>
         )}
       </div>
 
-      {/* Error message */}
+      {/* Voice error */}
       {voiceError && (
         <div className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
           {voiceError}
@@ -230,34 +223,42 @@ export default function AddConversation() {
 
       {/* Listening indicator */}
       {listening && (
-        <div className="mt-4 flex items-center gap-3 rounded-lg border-2 border-[#FF6B6B] bg-red-50 p-4">
+        <div className="mt-4 flex items-center gap-3 rounded-lg border-2 border-primary bg-accent p-4">
           <div className="relative flex h-4 w-4 items-center justify-center">
-            <div className="absolute h-4 w-4 animate-ping rounded-full bg-[#FF6B6B] opacity-75"></div>
-            <div className="relative h-4 w-4 rounded-full bg-[#FF6B6B]"></div>
+            <div className="absolute h-4 w-4 animate-ping rounded-full bg-primary opacity-75"></div>
+            <div className="relative h-4 w-4 rounded-full bg-primary"></div>
           </div>
-          <span className="font-semibold text-[#FF6B6B]">Listening... (auto-stops after 30s of silence)</span>
+          <span className="font-semibold text-primary">
+            Listening... (auto-stops after 30s of silence)
+          </span>
         </div>
       )}
 
       <div className="mt-5 flex items-center gap-2">
         <button
           onClick={() => {
-            if (listening) {
-              stopListening();
-            } else {
-              startListening();
-            }
+            if (listening) stopListening();
+            else startListening();
           }}
           className={`flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium shadow-sm transition-all ${
             listening
-              ? "border-2 border-[#FF6B6B] bg-red-50 text-[#FF6B6B]"
-              : "border border-gray-200 bg-white hover:bg-gray-50 hover:shadow"
+              ? "border-2 border-primary bg-accent text-primary"
+              : "border border-border bg-card text-foreground hover:bg-muted hover:shadow"
           }`}
           aria-label={listening ? "Stop recording" : "Start recording"}
-          title={listening ? "Click to stop recording" : "Click to start recording"}
         >
-          <svg className={`h-4 w-4 ${listening ? "animate-pulse" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+          <svg
+            className={`h-4 w-4 ${listening ? "animate-pulse" : ""}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"
+            />
           </svg>
           {listening ? "Stop recording" : "Start recording"}
         </button>
@@ -267,7 +268,7 @@ export default function AddConversation() {
               setShowTextFallback(false);
               setVoiceError("");
             }}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium transition-colors hover:bg-gray-50"
+            className="rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:bg-muted"
           >
             Type instead
           </button>
@@ -275,13 +276,11 @@ export default function AddConversation() {
         <button
           onClick={onSave}
           disabled={!content || saving || (setReminder && !reminderDate)}
-          className="ml-auto rounded-lg bg-[#FF6B6B] px-5 py-2.5 font-medium text-white shadow-sm transition-all hover:bg-[#FF5555] hover:shadow disabled:opacity-60"
+          className="ml-auto rounded-lg bg-primary px-5 py-2.5 font-medium text-primary-foreground shadow-sm transition-all hover:bg-primary/90 hover:shadow disabled:opacity-60"
         >
-          {saving ? "Saving…" : "Save"}
+          {saving ? "Saving..." : "Save"}
         </button>
       </div>
     </main>
   );
 }
-
-

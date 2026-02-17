@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx prisma migrate:*)",
+      "Bash(npx prisma db push:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "WebSearch"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

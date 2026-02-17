@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Remember",
-  description: "Capture and recall context from your conversations.",
+  title: "Recallect",
+  description: "Personal CRM for maintaining friendships and relationships.",
 };
 
 export const viewport: Viewport = {
@@ -32,7 +32,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}>
+      <body
+        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
+      >
         <Providers>{children}</Providers>
       </body>
     </html>

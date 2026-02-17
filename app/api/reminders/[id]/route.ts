@@ -1,123 +1,60 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSessionOrMock } from "@/lib/serverAuth";
-import { prisma } from "@/lib/prisma";
+import { db } from "@/db/drizzle";
+import { reminders } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
-// PATCH /api/reminders/[id] - Update a reminder
 export async function PATCH(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const session = await getServerSessionOrMock();
+  const { id } = await params;
+  const body = await request.json();
+  const { remindAt, status } = body;
 
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const existing = await db.query.reminders.findFirst({
+    where: eq(reminders.id, id),
+  });
 
-    const { id } = await params;
-    const body = await request.json();
-    const { remindAt, status } = body;
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    // Verify the reminder belongs to the user
-    const existingReminder = await prisma.reminder.findFirst({
-      where: {
-        id,
-        userId: user.id,
-      },
-    });
-
-    if (!existingReminder) {
-      return NextResponse.json(
-        { error: "Reminder not found" },
-        { status: 404 }
-      );
-    }
-
-    const updateData: {
-      remindAt?: Date;
-      status?: "PENDING" | "SENT" | "DISMISSED";
-    } = {};
-    if (remindAt) {
-      updateData.remindAt = new Date(remindAt);
-    }
-    if (status) {
-      updateData.status = status as "PENDING" | "SENT" | "DISMISSED";
-    }
-
-    const reminder = await prisma.reminder.update({
-      where: { id },
-      data: updateData,
-      include: {
-        person: true,
-        conversation: true,
-      },
-    });
-
-    return NextResponse.json(reminder);
-  } catch (error) {
-    console.error("Error updating reminder:", error);
-    return NextResponse.json(
-      { error: "Failed to update reminder" },
-      { status: 500 }
-    );
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+
+  const [updated] = await db
+    .update(reminders)
+    .set({
+      ...(remindAt && { remindAt: new Date(remindAt).toISOString() }),
+      ...(status && {
+        status: status as "PENDING" | "SENT" | "DISMISSED",
+      }),
+    })
+    .where(eq(reminders.id, id))
+    .returning();
+
+  const result = await db.query.reminders.findFirst({
+    where: eq(reminders.id, updated.id),
+    with: {
+      contact: true,
+      conversation: true,
+    },
+  });
+
+  return NextResponse.json(result);
 }
 
-// DELETE /api/reminders/[id] - Delete a reminder
 export async function DELETE(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
-  try {
-    const session = await getServerSessionOrMock();
+  const { id } = await params;
 
-    if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
+  const existing = await db.query.reminders.findFirst({
+    where: eq(reminders.id, id),
+  });
 
-    const { id } = await params;
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    // Verify the reminder belongs to the user
-    const existingReminder = await prisma.reminder.findFirst({
-      where: {
-        id,
-        userId: user.id,
-      },
-    });
-
-    if (!existingReminder) {
-      return NextResponse.json(
-        { error: "Reminder not found" },
-        { status: 404 }
-      );
-    }
-
-    await prisma.reminder.delete({
-      where: { id },
-    });
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Error deleting reminder:", error);
-    return NextResponse.json(
-      { error: "Failed to delete reminder" },
-      { status: 500 }
-    );
+  if (!existing) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
+
+  await db.delete(reminders).where(eq(reminders.id, id));
+  return NextResponse.json({ success: true });
 }

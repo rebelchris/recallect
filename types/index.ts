@@ -1,35 +1,54 @@
+import type { ContactFrequency, InteractionType, ImportantDateLabel } from "@/lib/constants";
+
 export interface Group {
   id: string;
   name: string;
   color?: string | null;
-  userId?: string | null;
-  createdAt: Date;
-  updatedAt: Date;
+  icon?: string | null;
+  createdAt: string;
 }
 
-export interface Person {
+export interface Contact {
   id: string;
   name: string;
+  lastName?: string | null;
+  nickname?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  company?: string | null;
+  jobTitle?: string | null;
   photoUrl?: string | null;
-  groupId?: string | null;
-  group?: Group | null;
-  userId: string;
-  createdAt: Date;
-  updatedAt: Date;
+  notes?: string | null;
+  contactFrequency?: ContactFrequency | null;
+  socialLinks?: {
+    twitter?: string;
+    linkedin?: string;
+    instagram?: string;
+    facebook?: string;
+    github?: string;
+    website?: string;
+  } | null;
+  whatsappId?: string | null;
+  createdAt: string;
+  updatedAt: string;
   conversations?: Conversation[];
+  groups?: Group[];
+  importantDates?: ImportantDate[];
   _count?: {
     conversations: number;
   };
+  lastConversationDate?: string | null;
 }
 
 export interface Conversation {
   id: string;
   content: string;
-  timestamp: Date;
-  personId: string;
-  createdAt: Date;
-  updatedAt: Date;
-  person?: Person;
+  type: InteractionType;
+  timestamp: string;
+  whatsappMessageId?: string | null;
+  contactId: string;
+  createdAt: string;
+  contact?: Contact;
   reminders?: Reminder[];
 }
 
@@ -41,15 +60,22 @@ export enum ReminderStatus {
 
 export interface Reminder {
   id: string;
-  userId: string;
-  personId: string;
+  contactId: string;
   conversationId: string;
-  remindAt: Date;
+  remindAt: string;
   status: ReminderStatus;
-  createdAt: Date;
-  updatedAt: Date;
-  person?: Person;
+  createdAt: string;
+  contact?: Contact;
   conversation?: Conversation;
 }
 
-
+export interface ImportantDate {
+  id: string;
+  contactId: string;
+  label: ImportantDateLabel;
+  date: string; // YYYY-MM-DD
+  year?: number | null;
+  recurring: boolean;
+  createdAt: string;
+  contact?: Contact;
+}

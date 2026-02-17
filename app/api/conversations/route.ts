@@ -1,72 +1,60 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSessionOrMock } from "@/lib/serverAuth";
-import { prisma } from "@/lib/prisma";
-import { isMockAuthEnabled } from "@/lib/mockFlags";
+import { db } from "@/db/drizzle";
+import { conversations, contacts } from "@/db/schema";
+import { eq, desc } from "drizzle-orm";
 
 export async function GET(request: NextRequest) {
-  const session = await getServerSessionOrMock();
-  if (!session?.user?.email)
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
   const { searchParams } = new URL(request.url);
-  const personId = searchParams.get("personId");
+  const contactId = searchParams.get("contactId");
 
-  if (isMockAuthEnabled()) {
-    return NextResponse.json([
-      {
-        id: "mock-convo",
-        content: "Mock conversation",
-        timestamp: new Date().toISOString(),
-        personId: personId || "mock-person",
-      },
-    ]);
-  }
-
-  const conversations = await prisma.conversation.findMany({
-    where: {
-      person: {
-        user: { email: session.user.email },
-      },
-      ...(personId && { personId }),
-    },
-    include: {
-      person: true,
+  const result = await db.query.conversations.findMany({
+    where: contactId ? eq(conversations.contactId, contactId) : undefined,
+    with: {
+      contact: true,
       reminders: true,
     },
-    orderBy: {
-      timestamp: "desc",
-    },
+    orderBy: [desc(conversations.timestamp)],
   });
 
-  return NextResponse.json(conversations);
+  return NextResponse.json(result);
 }
 
 export async function POST(req: Request) {
-  const session = await getServerSessionOrMock();
-  if (!session?.user?.email) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = await req.json();
-  const { personId, content, timestamp } = body as {
-    personId: string;
+  const { contactId, content, timestamp, type } = body as {
+    contactId: string;
     content: string;
     timestamp?: string;
+    type?: string;
   };
-  if (!personId || !content) return NextResponse.json({ error: "Missing fields" }, { status: 400 });
 
-  if (isMockAuthEnabled()) {
-    return NextResponse.json({ id: "mock-convo", personId, content, timestamp: timestamp || new Date().toISOString() });
+  if (!contactId || !content) {
+    return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
-  const person = await prisma.person.findUnique({ where: { id: personId } });
-  if (!person) return NextResponse.json({ error: "Not found" }, { status: 404 });
-
-  const convo = await prisma.conversation.create({
-    data: {
-      personId,
-      content,
-      timestamp: timestamp ? new Date(timestamp) : undefined,
-    },
+  const contact = await db.query.contacts.findFirst({
+    where: eq(contacts.id, contactId),
   });
+
+  if (!contact) {
+    return NextResponse.json({ error: "Contact not found" }, { status: 404 });
+  }
+
+  const [convo] = await db
+    .insert(conversations)
+    .values({
+      contactId,
+      content,
+      type: (type as typeof conversations.type.enumValues[number]) || "other",
+      timestamp: timestamp || new Date().toISOString(),
+    })
+    .returning();
+
+  // Update contact's updatedAt
+  await db
+    .update(contacts)
+    .set({ updatedAt: new Date().toISOString() })
+    .where(eq(contacts.id, contactId));
+
   return NextResponse.json(convo);
 }
-
-
