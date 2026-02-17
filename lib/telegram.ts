@@ -61,10 +61,3 @@ export async function destroyTelegram(): Promise<void> {
     console.log("Telegram bot disconnected");
   }
 }
-
-// Auto-init if env var is set
-if (process.env.TELEGRAM_BOT_TOKEN) {
-  initTelegram(process.env.TELEGRAM_BOT_TOKEN).catch((err) => {
-    console.error("Telegram auto-init error:", err);
-  });
-}
