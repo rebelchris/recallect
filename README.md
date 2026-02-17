@@ -34,14 +34,37 @@ WHATSAPP_AUTO_INIT=true
 - `TELEGRAM_BOT_TOKEN` enables Telegram auto-connect on server boot.
 - `WHATSAPP_AUTO_INIT=true` makes the server auto-start WhatsApp on boot (session is reused from `data/.wwebjs_auth` after first QR scan).
 
-### 2) Build for production
+### 2) Create the local database on the Mac mini
+
+Fresh DB (empty, tables only):
 
 ```bash
+mkdir -p data
 npm ci
+npm run db:push
+```
+
+Restore existing data from your current machine (optional):
+
+```bash
+# run from your current machine
+scp /path/to/recallect/data/recallect.db <mac-mini-user>@<mac-mini-host>:/Users/<mac-mini-user>/www/recallect/data/recallect.db
+```
+
+Then on Mac mini, make sure schema is current:
+
+```bash
+cd /Users/<mac-mini-user>/www/recallect
+npm run db:push
+```
+
+### 3) Build for production
+
+```bash
 npm run build
 ```
 
-### 3) Start as a gateway process
+### 4) Start as a gateway process
 
 ```bash
 npm run start:gateway
@@ -49,7 +72,7 @@ npm run start:gateway
 
 This binds the app on `0.0.0.0:3000` so other devices can connect.
 
-### 4) Keep it running across reboot (launchd)
+### 5) Keep it running across reboot (launchd)
 
 Create `~/Library/LaunchAgents/com.recallect.gateway.plist`:
 
@@ -107,11 +130,11 @@ launchctl list | rg recallect
 tail -f /tmp/recallect.out.log /tmp/recallect.err.log
 ```
 
-### 5) First-time WhatsApp link
+### 6) First-time WhatsApp link
 
 Open `/whatsapp`, scan QR once, then LocalAuth persists in `data/.wwebjs_auth`.
 
-### 6) Access from other devices safely
+### 7) Access from other devices safely
 
 Prefer Tailscale over public port forwarding. Keep this app private; it has no built-in authentication.
 
