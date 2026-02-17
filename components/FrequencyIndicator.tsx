@@ -9,18 +9,6 @@ interface FrequencyIndicatorProps {
   showLabel?: boolean;
 }
 
-const STALENESS_COLORS = {
-  green: "bg-green-500",
-  yellow: "bg-yellow-500",
-  red: "bg-red-500",
-} as const;
-
-const STALENESS_TEXT_COLORS = {
-  green: "text-green-600",
-  yellow: "text-yellow-600",
-  red: "text-red-600",
-} as const;
-
 export default function FrequencyIndicator({
   frequency,
   lastConversationDate,
@@ -30,32 +18,38 @@ export default function FrequencyIndicator({
   if (!frequencyInfo) return null;
 
   const now = new Date();
-  const lastDate = lastConversationDate
-    ? new Date(lastConversationDate)
-    : null;
-
+  const lastDate = lastConversationDate ? new Date(lastConversationDate) : null;
   const daysSince = lastDate
     ? Math.floor((now.getTime() - lastDate.getTime()) / (1000 * 60 * 60 * 24))
     : Infinity;
 
-  const staleness =
-    daysSince === Infinity ? "red" : getStaleness(daysSince, frequencyInfo.days);
+  const staleness = daysSince === Infinity 
+    ? "red" 
+    : getStaleness(daysSince, frequencyInfo.days);
+
+  const colors = {
+    green: { dot: "bg-success", text: "text-success" },
+    yellow: { dot: "bg-warning", text: "text-warning" },
+    red: { dot: "bg-danger", text: "text-danger" },
+  };
+
+  const { dot, text } = colors[staleness];
 
   return (
-    <div className="flex items-center gap-1.5">
-      <div
-        className={`h-2.5 w-2.5 rounded-full ${STALENESS_COLORS[staleness]}`}
-        title={`${frequencyInfo.label} — ${daysSince === Infinity ? "Never contacted" : `${daysSince}d since last contact`}`}
-      />
+    <div 
+      className="flex items-center gap-1.5"
+      title={`${frequencyInfo.label} — ${
+        daysSince === Infinity ? "Never contacted" : `${daysSince}d since last contact`
+      }`}
+    >
+      <div className={`h-1.5 w-1.5 rounded-full ${dot}`} />
       {showLabel && (
-        <span
-          className={`text-xs font-medium ${STALENESS_TEXT_COLORS[staleness]}`}
-        >
+        <span className={`text-xs font-medium ${text}`}>
           {daysSince === Infinity
             ? "Never"
             : daysSince === 0
               ? "Today"
-              : `${daysSince}d ago`}
+              : `${daysSince}d`}
         </span>
       )}
     </div>

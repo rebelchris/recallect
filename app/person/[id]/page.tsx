@@ -7,9 +7,11 @@ import {
   Mail,
   Phone,
   Building2,
-  Briefcase,
   Calendar,
   ExternalLink,
+  ChevronLeft,
+  Clock,
+  MessageCircle,
 } from "lucide-react";
 import { relativeTimeFrom } from "@/lib/utils";
 import { CONTACT_FREQUENCIES, IMPORTANT_DATE_LABELS } from "@/lib/constants";
@@ -26,8 +28,7 @@ export default function PersonDetail() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editingConversation, setEditingConversation] =
-    useState<Conversation | null>(null);
+  const [editingConversation, setEditingConversation] = useState<Conversation | null>(null);
 
   const fetchPersonData = async () => {
     try {
@@ -45,12 +46,8 @@ export default function PersonDetail() {
         fetch(`/api/conversations?contactId=${params.id}`),
       ]);
 
-      if (remindersRes.ok) {
-        setReminders(await remindersRes.json());
-      }
-      if (conversationsRes.ok) {
-        setConversations(await conversationsRes.json());
-      }
+      if (remindersRes.ok) setReminders(await remindersRes.json());
+      if (conversationsRes.ok) setConversations(await conversationsRes.json());
     } catch (error) {
       console.error("Error fetching contact data:", error);
     } finally {
@@ -64,18 +61,12 @@ export default function PersonDetail() {
 
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") {
-        fetchPersonData();
-      }
+      if (document.visibilityState === "visible") fetchPersonData();
     };
-
-    const handleFocus = () => {
-      fetchPersonData();
-    };
+    const handleFocus = () => fetchPersonData();
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("focus", handleFocus);
-
     return () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", handleFocus);
@@ -84,227 +75,206 @@ export default function PersonDetail() {
 
   if (loading) {
     return (
-      <div className="p-6 text-center text-muted-foreground">Loading...</div>
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-muted-foreground">Loading...</p>
+      </div>
     );
   }
 
   if (!contact) {
     return (
-      <div className="p-6 text-center text-muted-foreground">Not found</div>
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-sm text-muted-foreground">Contact not found</p>
+      </div>
     );
   }
 
-  const displayName = [contact.name, contact.lastName]
-    .filter(Boolean)
-    .join(" ");
+  const displayName = [contact.name, contact.lastName].filter(Boolean).join(" ");
 
   return (
     <>
-      <main className="mx-auto max-w-md p-6 pb-24">
-        {/* Header */}
-        <div className="mb-5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/"
-              className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-accent"
-            >
-              ← Back
-            </Link>
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                {displayName}
-              </h1>
-              {contact.nickname && (
-                <p className="text-sm text-muted-foreground">
-                  &ldquo;{contact.nickname}&rdquo;
-                </p>
-              )}
-            </div>
-          </div>
+      <main className="mx-auto max-w-lg px-5 pb-28 pt-6">
+        {/* Navigation */}
+        <nav className="mb-6 flex items-center justify-between">
+          <Link
+            href="/"
+            className="flex items-center gap-1 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ChevronLeft size={18} />
+            Back
+          </Link>
           <Link
             href={`/person/${contact.id}/edit`}
-            className="rounded-lg bg-muted px-4 py-2 text-sm font-medium shadow-sm transition-all hover:bg-muted/80 hover:shadow"
+            className="rounded-lg border border-border px-4 py-2 text-sm font-medium transition-colors hover:bg-muted"
           >
             Edit
           </Link>
-        </div>
+        </nav>
 
-        {/* Groups */}
-        {contact.groups && contact.groups.length > 0 && (
-          <div className="mb-4 flex flex-wrap gap-2">
-            {contact.groups.map((group) => (
-              <GroupBadge key={group.id} group={group} />
-            ))}
-          </div>
-        )}
-
-        {/* Stats bar */}
-        <div className="mb-6 flex items-center gap-3 rounded-xl bg-muted p-4 text-sm font-medium text-muted-foreground">
-          <div>
-            <span className="text-foreground">{conversations.length}</span>{" "}
-            interactions
-          </div>
-          <span>•</span>
-          <div>
-            Last:{" "}
-            <span className="text-foreground">
-              {conversations[0]
-                ? relativeTimeFrom(conversations[0].timestamp)
-                : "—"}
-            </span>
-          </div>
-          {contact.contactFrequency && (
-            <>
-              <span>•</span>
-              <FrequencyIndicator
-                frequency={contact.contactFrequency}
-                lastConversationDate={conversations[0]?.timestamp ?? null}
-                showLabel
-              />
-            </>
+        {/* Profile Header */}
+        <header className="mb-8">
+          <h1 className="text-2xl font-semibold tracking-tight">{displayName}</h1>
+          {contact.nickname && (
+            <p className="mt-1 text-muted-foreground">"{contact.nickname}"</p>
           )}
-        </div>
-
-        {/* Contact Info */}
-        {(contact.email ||
-          contact.phone ||
-          contact.company ||
-          contact.jobTitle) && (
-          <div className="mb-6 space-y-2 rounded-xl bg-card p-4 shadow-sm">
-            {contact.email && (
-              <div className="flex items-center gap-2.5 text-sm">
-                <Mail size={16} className="text-muted-foreground" />
-                <a
-                  href={`mailto:${contact.email}`}
-                  className="text-primary hover:underline"
-                >
-                  {contact.email}
-                </a>
-              </div>
-            )}
-            {contact.phone && (
-              <div className="flex items-center gap-2.5 text-sm">
-                <Phone size={16} className="text-muted-foreground" />
-                <a
-                  href={`tel:${contact.phone}`}
-                  className="text-primary hover:underline"
-                >
-                  {contact.phone}
-                </a>
-              </div>
-            )}
-            {(contact.company || contact.jobTitle) && (
-              <div className="flex items-center gap-2.5 text-sm">
-                <Building2 size={16} className="text-muted-foreground" />
-                <span>
-                  {contact.jobTitle && (
-                    <span className="text-foreground">{contact.jobTitle}</span>
-                  )}
-                  {contact.jobTitle && contact.company && " at "}
-                  {contact.company && (
-                    <span className="text-foreground">{contact.company}</span>
-                  )}
-                </span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Social Links */}
-        {contact.socialLinks &&
-          Object.values(contact.socialLinks).some(Boolean) && (
-            <div className="mb-6 flex flex-wrap gap-2">
-              {contact.socialLinks.twitter && (
-                <a
-                  href={`https://x.com/${contact.socialLinks.twitter}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
-                >
-                  𝕏 {contact.socialLinks.twitter}
-                  <ExternalLink size={10} />
-                </a>
-              )}
-              {contact.socialLinks.linkedin && (
-                <a
-                  href={contact.socialLinks.linkedin}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
-                >
-                  LinkedIn
-                  <ExternalLink size={10} />
-                </a>
-              )}
-              {contact.socialLinks.instagram && (
-                <a
-                  href={`https://instagram.com/${contact.socialLinks.instagram}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted"
-                >
-                  IG @{contact.socialLinks.instagram}
-                  <ExternalLink size={10} />
-                </a>
-              )}
+          
+          {/* Groups */}
+          {contact.groups && contact.groups.length > 0 && (
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {contact.groups.map((group) => (
+                <GroupBadge key={group.id} group={group} size="sm" />
+              ))}
             </div>
           )}
 
+          {/* Stats */}
+          <div className="mt-4 flex items-center gap-4 text-sm text-muted-foreground">
+            <span>
+              <span className="font-medium text-foreground">{conversations.length}</span> interactions
+            </span>
+            <span className="text-border">·</span>
+            <span>
+              Last <span className="font-medium text-foreground">
+                {conversations[0] ? relativeTimeFrom(conversations[0].timestamp) : "never"}
+              </span>
+            </span>
+            {contact.contactFrequency && (
+              <>
+                <span className="text-border">·</span>
+                <FrequencyIndicator
+                  frequency={contact.contactFrequency}
+                  lastConversationDate={conversations[0]?.timestamp ?? null}
+                  showLabel
+                />
+              </>
+            )}
+          </div>
+        </header>
+
+        {/* Contact Info */}
+        {(contact.email || contact.phone || contact.company || contact.jobTitle) && (
+          <section className="mb-6 space-y-2">
+            {contact.email && (
+              <a
+                href={`mailto:${contact.email}`}
+                className="flex items-center gap-3 rounded-lg p-2 -mx-2 transition-colors hover:bg-muted"
+              >
+                <Mail size={16} className="text-muted-foreground" />
+                <span className="text-sm">{contact.email}</span>
+              </a>
+            )}
+            {contact.phone && (
+              <a
+                href={`tel:${contact.phone}`}
+                className="flex items-center gap-3 rounded-lg p-2 -mx-2 transition-colors hover:bg-muted"
+              >
+                <Phone size={16} className="text-muted-foreground" />
+                <span className="text-sm">{contact.phone}</span>
+              </a>
+            )}
+            {(contact.company || contact.jobTitle) && (
+              <div className="flex items-center gap-3 p-2 -mx-2">
+                <Building2 size={16} className="text-muted-foreground" />
+                <span className="text-sm">
+                  {contact.jobTitle}
+                  {contact.jobTitle && contact.company && " at "}
+                  {contact.company}
+                </span>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Social Links */}
+        {contact.socialLinks && Object.values(contact.socialLinks).some(Boolean) && (
+          <section className="mb-6 flex flex-wrap gap-2">
+            {contact.socialLinks.twitter && (
+              <a
+                href={`https://x.com/${contact.socialLinks.twitter}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+              >
+                𝕏 {contact.socialLinks.twitter}
+                <ExternalLink size={10} className="text-muted-foreground" />
+              </a>
+            )}
+            {contact.socialLinks.linkedin && (
+              <a
+                href={contact.socialLinks.linkedin}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+              >
+                LinkedIn
+                <ExternalLink size={10} className="text-muted-foreground" />
+              </a>
+            )}
+            {contact.socialLinks.instagram && (
+              <a
+                href={`https://instagram.com/${contact.socialLinks.instagram}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-muted"
+              >
+                @{contact.socialLinks.instagram}
+                <ExternalLink size={10} className="text-muted-foreground" />
+              </a>
+            )}
+          </section>
+        )}
+
         {/* Important Dates */}
         {contact.importantDates && contact.importantDates.length > 0 && (
-          <div className="mb-6">
-            <h2 className="mb-3 text-base font-semibold">Important Dates</h2>
+          <section className="mb-6">
+            <SectionHeader icon={Calendar} title="Important dates" />
             <div className="space-y-2">
               {contact.importantDates.map((d: ImportantDate) => (
                 <div
                   key={d.id}
-                  className="flex items-center gap-2.5 rounded-xl bg-card p-3 shadow-sm"
+                  className="flex items-center justify-between rounded-xl border border-border p-4"
                 >
-                  <Calendar size={16} className="text-primary" />
-                  <div className="text-sm">
-                    <span className="font-medium">
-                      {IMPORTANT_DATE_LABELS[d.label] || d.label}
-                    </span>
-                    <span className="text-muted-foreground">
-                      {" "}
-                      — {d.date}
-                      {d.year && ` (${d.year})`}
-                    </span>
-                  </div>
+                  <span className="text-sm font-medium">
+                    {IMPORTANT_DATE_LABELS[d.label] || d.label}
+                  </span>
+                  <span className="text-sm text-muted-foreground">
+                    {d.date}{d.year && ` (${d.year})`}
+                  </span>
                 </div>
               ))}
             </div>
-          </div>
+          </section>
         )}
 
         {/* Notes */}
         {contact.notes && (
-          <div className="mb-6 rounded-xl bg-card p-4 shadow-sm">
-            <h3 className="mb-2 text-sm font-semibold text-muted-foreground">
+          <section className="mb-6 rounded-xl border border-border p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-2">
               Notes
-            </h3>
+            </p>
             <p className="whitespace-pre-wrap text-sm leading-relaxed">
               {contact.notes}
             </p>
-          </div>
+          </section>
         )}
 
         {/* Frequency Goal */}
         {contact.contactFrequency && (
-          <div className="mb-6 rounded-xl border-2 border-secondary/30 bg-accent p-4">
-            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <Briefcase size={16} className="text-secondary" />
-              Goal: Reach out{" "}
-              {CONTACT_FREQUENCIES[contact.contactFrequency]?.label.toLowerCase()}
-            </div>
-          </div>
+          <section className="mb-6 rounded-xl bg-muted p-4">
+            <p className="text-sm">
+              <span className="text-muted-foreground">Goal:</span>{" "}
+              <span className="font-medium">
+                {CONTACT_FREQUENCIES[contact.contactFrequency]?.label}
+              </span>
+            </p>
+          </section>
         )}
 
         {/* Active Reminders */}
         {reminders.length > 0 && (
-          <div className="mb-6">
-            <h2 className="mb-3 text-base font-semibold">Active Reminders</h2>
-            <ul className="space-y-3">
+          <section className="mb-6">
+            <SectionHeader icon={Clock} title="Reminders" />
+            <ul className="space-y-2">
               {reminders.map((reminder) => (
                 <ReminderItem
                   key={reminder.id}
@@ -313,28 +283,31 @@ export default function PersonDetail() {
                 />
               ))}
             </ul>
-          </div>
+          </section>
         )}
 
         {/* Conversations */}
-        <h2 className="mb-3 text-base font-semibold">Interactions</h2>
-        {conversations.length === 0 ? (
-          <div className="rounded-xl bg-muted p-6 text-center text-sm text-muted-foreground">
-            No interactions yet. Tap the + button to log one.
-          </div>
-        ) : (
-          <ul className="space-y-3">
-            {conversations.map((c) => (
-              <ConversationItem
-                key={c.id}
-                conversation={c}
-                onUpdate={fetchPersonData}
-                onEdit={setEditingConversation}
-                relativeTime={relativeTimeFrom(c.timestamp)}
-              />
-            ))}
-          </ul>
-        )}
+        <section>
+          <SectionHeader icon={MessageCircle} title="Interactions" count={conversations.length} />
+          {conversations.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border py-12 text-center">
+              <p className="text-sm text-muted-foreground">No interactions yet</p>
+              <p className="mt-1 text-xs text-muted-foreground/60">Tap + to log one</p>
+            </div>
+          ) : (
+            <ul className="space-y-2">
+              {conversations.map((c) => (
+                <ConversationItem
+                  key={c.id}
+                  conversation={c}
+                  onUpdate={fetchPersonData}
+                  onEdit={setEditingConversation}
+                  relativeTime={relativeTimeFrom(c.timestamp)}
+                />
+              ))}
+            </ul>
+          )}
+        </section>
       </main>
 
       <EditConversationModal
@@ -344,5 +317,25 @@ export default function PersonDetail() {
         onUpdate={fetchPersonData}
       />
     </>
+  );
+}
+
+function SectionHeader({ 
+  icon: Icon, 
+  title, 
+  count 
+}: { 
+  icon: React.ComponentType<{ className?: string; size?: number }>; 
+  title: string;
+  count?: number;
+}) {
+  return (
+    <div className="mb-3 flex items-center gap-2">
+      <Icon size={16} className="text-muted-foreground" />
+      <h2 className="text-sm font-medium text-muted-foreground">
+        {title}
+        {count !== undefined && <span className="ml-1.5 text-muted-foreground/60">{count}</span>}
+      </h2>
+    </div>
   );
 }

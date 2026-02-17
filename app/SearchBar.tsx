@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Search } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 
 export default function SearchBar({
   initialSearch,
@@ -32,20 +32,22 @@ export default function SearchBar({
 
   return (
     <div className="relative">
-      <div className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2">
-        <Search size={18} className="text-muted-foreground" />
-      </div>
+      <Search 
+        size={16} 
+        className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" 
+      />
       <input
         type="text"
         value={search}
         onChange={(e) => handleSearchChange(e.target.value)}
-        placeholder="Search people or conversations..."
-        className="w-full rounded-xl border border-border bg-card py-2.5 pl-11 pr-4 text-sm shadow-sm placeholder-muted-foreground transition-all focus:border-secondary focus:outline-none focus:ring-2 focus:ring-secondary/20 focus:shadow"
+        placeholder="Search..."
+        className="w-full rounded-lg border border-border bg-background py-2.5 pl-10 pr-4 text-sm placeholder:text-muted-foreground/60 transition-colors focus:border-foreground/20 focus:outline-none"
       />
       {isPending && (
-        <div className="absolute right-3.5 top-1/2 -translate-y-1/2">
-          <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-        </div>
+        <Loader2 
+          size={14} 
+          className="absolute right-3.5 top-1/2 -translate-y-1/2 animate-spin text-muted-foreground" 
+        />
       )}
     </div>
   );

@@ -13,13 +13,8 @@ export default function FloatingAddButton({ personId }: FloatingAddButtonProps =
   const [isModalOpen, setIsModalOpen] = useState(false);
   const pathname = usePathname();
 
-  // Detect if we're on a person page and extract the person ID
   const detectedPersonId = useMemo(() => {
-    if (personId) {
-      return personId;
-    }
-
-    // Match pattern: /person/[id] or /person/[id]/...
+    if (personId) return personId;
     const personPageMatch = pathname.match(/^\/person\/([^\/]+)/);
     return personPageMatch ? personPageMatch[1] : undefined;
   }, [pathname, personId]);
@@ -28,10 +23,10 @@ export default function FloatingAddButton({ personId }: FloatingAddButtonProps =
     <>
       <button
         onClick={() => setIsModalOpen(true)}
-        className="fixed bottom-6 right-6 z-50 flex h-16 w-16 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-xl transition-all hover:scale-110 hover:shadow-2xl active:scale-95"
-        aria-label="Quick add conversation"
+        className="fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-foreground text-background shadow-lg transition-all hover:scale-105 active:scale-95"
+        aria-label="Add conversation"
       >
-        <Plus size={28} strokeWidth={2.5} />
+        <Plus size={24} strokeWidth={2} />
       </button>
 
       <QuickAddModal

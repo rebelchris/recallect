@@ -13,16 +13,16 @@ export default function InteractionTypeSelector({
   onChange,
 }: InteractionTypeSelectorProps) {
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-1.5">
       {(Object.keys(INTERACTION_TYPES) as InteractionType[]).map((type) => (
         <button
           key={type}
           type="button"
           onClick={() => onChange(type)}
-          className={`flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+          className={`flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition-colors ${
             value === type
-              ? "border-2 border-primary bg-accent text-primary"
-              : "border border-border bg-card text-foreground hover:bg-muted"
+              ? "bg-foreground text-background"
+              : "bg-muted text-muted-foreground hover:text-foreground"
           }`}
         >
           <InteractionTypeIcon type={type} size={14} />
