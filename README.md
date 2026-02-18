@@ -37,6 +37,11 @@ REMINDER_LLM_MODEL=gpt-4.1-mini
 REMINDER_LLM_API_KEY=your_api_key
 # Optional: {"HTTP-Referer":"https://your-app.example","X-Title":"Recallect"}
 REMINDER_LLM_HEADERS_JSON=
+# Google birthday import (optional)
+GOOGLE_CLIENT_ID=your_google_oauth_client_id
+GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
+# Optional, defaults to http://<host>/api/integrations/google/callback
+# GOOGLE_OAUTH_REDIRECT_URI=https://your-host/api/integrations/google/callback
 # Optional if provider=ollama (model must exist locally)
 # REMINDER_LLM_PROVIDER=ollama
 # REMINDER_LLM_BASE_URL=http://127.0.0.1:11434
@@ -50,6 +55,7 @@ REMINDER_LLM_HEADERS_JSON=
 - `TELEGRAM_STANDUP_TIME` sets local daily standup send time in `HH:MM` (24h).
 - `REMINDER_LLM_*` configures auto-generated reminder suggestions. `openai-compatible` works with most hosted/local providers that expose a Chat Completions API.
 - If no `REMINDER_LLM_MODEL` is set, reminders still use deterministic follow-up rules.
+- `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` enable Google Contacts birthday import.
 
 ### 2) Create the local database on the Mac mini
 
@@ -190,6 +196,19 @@ curl -X POST http://localhost:3000/api/reminders/backfill \
   -H "Content-Type: application/json" \
   -d '{"dryRun":false,"contactId":"<contact-id>","fromTimestamp":"2025-01-01T00:00:00.000Z"}'
 ```
+
+## Google birthday import
+
+1. In Google Cloud Console, create an OAuth client and set an authorized redirect URI:
+   - `http://localhost:3000/api/integrations/google/callback` (local dev)
+2. Add `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` to `.env.local`.
+3. Open `/reminders`, click `Connect`, then `Import birthdays`.
+
+Birthdays are matched to existing contacts by:
+- exact email match first,
+- then exact full-name match.
+
+Imported birthdays are stored in `important_dates` with `label="birthday"` and `recurring=true`.
 
 ## Learn More
 

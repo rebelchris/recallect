@@ -190,3 +190,19 @@ export const telegramSubscribers = sqliteTable("telegram_subscribers", {
     .notNull()
     .$defaultFn(() => new Date().toISOString()),
 });
+
+export const integrations = sqliteTable("integrations", {
+  provider: text("provider").primaryKey(), // e.g. "google"
+  accountEmail: text("account_email"),
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token"),
+  expiresAt: text("expires_at"),
+  scope: text("scope"),
+  tokenType: text("token_type"),
+  createdAt: text("created_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+  updatedAt: text("updated_at")
+    .notNull()
+    .$defaultFn(() => new Date().toISOString()),
+});

@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   Clock,
   MessageCircle,
+  Plus,
 } from "lucide-react";
 import { relativeTimeFrom } from "@/lib/utils";
 import { CONTACT_FREQUENCIES, IMPORTANT_DATE_LABELS } from "@/lib/constants";
@@ -29,6 +30,12 @@ export default function PersonDetail() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingConversation, setEditingConversation] = useState<Conversation | null>(null);
+  const [showQuickInfo, setShowQuickInfo] = useState(false);
+  const [quickEmail, setQuickEmail] = useState("");
+  const [quickPhone, setQuickPhone] = useState("");
+  const [quickBirthday, setQuickBirthday] = useState("");
+  const [quickInfoSaving, setQuickInfoSaving] = useState(false);
+  const [quickInfoMessage, setQuickInfoMessage] = useState("");
 
   const fetchPersonData = async () => {
     try {
@@ -73,6 +80,14 @@ export default function PersonDetail() {
     };
   }, [params.id]);
 
+  useEffect(() => {
+    if (!contact) return;
+    setQuickEmail(contact.email || "");
+    setQuickPhone(contact.phone || "");
+    const birthday = contact.importantDates?.find((d) => d.label === "birthday");
+    setQuickBirthday(birthday?.date?.slice(0, 10) || "");
+  }, [contact]);
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -90,6 +105,79 @@ export default function PersonDetail() {
   }
 
   const displayName = [contact.name, contact.lastName].filter(Boolean).join(" ");
+  const birthday = contact.importantDates?.find((d) => d.label === "birthday");
+
+  async function saveQuickInfo(e: React.FormEvent) {
+    e.preventDefault();
+    if (!contact) return;
+
+    setQuickInfoSaving(true);
+    setQuickInfoMessage("");
+
+    try {
+      const contactRes = await fetch(`/api/contacts/${contact.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: quickEmail.trim() || null,
+          phone: quickPhone.trim() || null,
+        }),
+      });
+
+      if (!contactRes.ok) {
+        throw new Error("Failed to save contact info");
+      }
+
+      if (quickBirthday) {
+        if (birthday) {
+          const updateBirthdayRes = await fetch(`/api/important-dates/${birthday.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              label: "birthday",
+              date: quickBirthday,
+              year: null,
+              recurring: true,
+            }),
+          });
+          if (!updateBirthdayRes.ok) {
+            throw new Error("Failed to update birthday");
+          }
+        } else {
+          const createBirthdayRes = await fetch("/api/important-dates", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              contactId: contact.id,
+              label: "birthday",
+              date: quickBirthday,
+              year: null,
+              recurring: true,
+            }),
+          });
+          if (!createBirthdayRes.ok) {
+            throw new Error("Failed to create birthday");
+          }
+        }
+      } else if (birthday) {
+        const deleteBirthdayRes = await fetch(`/api/important-dates/${birthday.id}`, {
+          method: "DELETE",
+        });
+        if (!deleteBirthdayRes.ok) {
+          throw new Error("Failed to remove birthday");
+        }
+      }
+
+      await fetchPersonData();
+      setShowQuickInfo(false);
+      setQuickInfoMessage("Basic info updated.");
+    } catch (error) {
+      console.error("Failed to save quick info:", error);
+      setQuickInfoMessage("Failed to update basic info.");
+    } finally {
+      setQuickInfoSaving(false);
+    }
+  }
 
   return (
     <>
@@ -115,7 +203,7 @@ export default function PersonDetail() {
         <header className="mb-8">
           <h1 className="text-2xl font-semibold tracking-tight">{displayName}</h1>
           {contact.nickname && (
-            <p className="mt-1 text-muted-foreground">"{contact.nickname}"</p>
+            <p className="mt-1 text-muted-foreground">&quot;{contact.nickname}&quot;</p>
           )}
           
           {/* Groups */}
@@ -151,10 +239,25 @@ export default function PersonDetail() {
           </div>
         </header>
 
-        {/* Contact Info */}
-        {(contact.email || contact.phone || contact.company || contact.jobTitle) && (
-          <section className="mb-6 space-y-2">
-            {contact.email && (
+        {/* Basic Info */}
+        <section className="mb-6 rounded-xl border border-border bg-card p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-sm font-medium text-muted-foreground">Basic info</p>
+            <button
+              type="button"
+              onClick={() => {
+                setShowQuickInfo((prev) => !prev);
+                setQuickInfoMessage("");
+              }}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <Plus size={12} />
+              {showQuickInfo ? "Close" : "Quick add"}
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {contact.email ? (
               <a
                 href={`mailto:${contact.email}`}
                 className="flex items-center gap-3 rounded-lg p-2 -mx-2 transition-colors hover:bg-muted"
@@ -162,8 +265,9 @@ export default function PersonDetail() {
                 <Mail size={16} className="text-muted-foreground" />
                 <span className="text-sm">{contact.email}</span>
               </a>
-            )}
-            {contact.phone && (
+            ) : null}
+
+            {contact.phone ? (
               <a
                 href={`tel:${contact.phone}`}
                 className="flex items-center gap-3 rounded-lg p-2 -mx-2 transition-colors hover:bg-muted"
@@ -171,7 +275,15 @@ export default function PersonDetail() {
                 <Phone size={16} className="text-muted-foreground" />
                 <span className="text-sm">{contact.phone}</span>
               </a>
-            )}
+            ) : null}
+
+            {birthday ? (
+              <div className="flex items-center gap-3 rounded-lg p-2 -mx-2">
+                <Calendar size={16} className="text-muted-foreground" />
+                <span className="text-sm">Birthday: {birthday.date.slice(0, 10)}</span>
+              </div>
+            ) : null}
+
             {(contact.company || contact.jobTitle) && (
               <div className="flex items-center gap-3 p-2 -mx-2">
                 <Building2 size={16} className="text-muted-foreground" />
@@ -182,8 +294,70 @@ export default function PersonDetail() {
                 </span>
               </div>
             )}
-          </section>
-        )}
+
+            {!contact.email && !contact.phone && !birthday && (
+              <p className="text-sm text-muted-foreground">No basic info yet.</p>
+            )}
+          </div>
+
+          {showQuickInfo && (
+            <form onSubmit={saveQuickInfo} className="mt-4 space-y-3 border-t border-border pt-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                    Email
+                  </label>
+                  <input
+                    type="email"
+                    value={quickEmail}
+                    onChange={(e) => setQuickEmail(e.target.value)}
+                    placeholder="email@example.com"
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-secondary"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                    Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={quickPhone}
+                    onChange={(e) => setQuickPhone(e.target.value)}
+                    placeholder="+1 ..."
+                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-secondary"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-1 block text-xs font-medium text-muted-foreground">
+                  Birthday
+                </label>
+                <input
+                  type="date"
+                  value={quickBirthday}
+                  onChange={(e) => setQuickBirthday(e.target.value)}
+                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm outline-none focus:border-secondary"
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                {quickInfoMessage ? (
+                  <p className="text-xs text-muted-foreground">{quickInfoMessage}</p>
+                ) : (
+                  <span />
+                )}
+                <button
+                  type="submit"
+                  disabled={quickInfoSaving}
+                  className="rounded-lg bg-foreground px-4 py-2 text-xs font-medium text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
+                >
+                  {quickInfoSaving ? "Saving..." : "Save basic info"}
+                </button>
+              </div>
+            </form>
+          )}
+        </section>
 
         {/* Social Links */}
         {contact.socialLinks && Object.values(contact.socialLinks).some(Boolean) && (
