@@ -65,6 +65,13 @@ export default async function Home({
             <h1 className="text-2xl font-semibold tracking-tight">Recallect</h1>
             <div className="flex items-center gap-0.5">
               <Link
+                href="/reminders"
+                className="rounded-full p-2.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                title="Reminders"
+              >
+                <Clock size={20} />
+              </Link>
+              <Link
                 href="/whatsapp"
                 className="rounded-full p-2.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 title="WhatsApp"
