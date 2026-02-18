@@ -48,6 +48,7 @@ GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
 # REMINDER_LLM_MODEL=llama3.1:8b
 # Optional tuning
 # AUTO_REMINDER_MIN_CONFIDENCE=0.72
+# AUTO_REMINDER_RESOLUTION_MIN_CONFIDENCE=0.72
 ```
 
 - `TELEGRAM_BOT_TOKEN` enables Telegram auto-connect on server boot.
@@ -55,6 +56,7 @@ GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
 - `TELEGRAM_STANDUP_TIME` sets local daily standup send time in `HH:MM` (24h).
 - `REMINDER_LLM_*` configures auto-generated reminder suggestions. `openai-compatible` works with most hosted/local providers that expose a Chat Completions API.
 - If no `REMINDER_LLM_MODEL` is set, reminders still use deterministic follow-up rules.
+- New conversations can auto-resolve older pending reminders for the same contact when completion intent is detected (LLM-first with conservative rule fallback).
 - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` enable Google Contacts birthday import.
 
 ### 2) Create the local database on the Mac mini

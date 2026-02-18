@@ -4,6 +4,7 @@ import { conversations, contacts } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { suggestAutoReminder } from "@/lib/auto-reminders";
 import { createReminderIfMissing } from "@/lib/reminders";
+import { resolvePendingRemindersFromConversation } from "@/lib/reminder-resolution";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -66,6 +67,33 @@ export async function POST(req: Request) {
     confidence: number;
     source: "rules" | "llm";
   } | null = null;
+  let autoResolvedReminders: {
+    count: number;
+    ids: string[];
+    source: "llm" | "rules";
+  } | null = null;
+
+  try {
+    const resolved = await resolvePendingRemindersFromConversation({
+      contactId,
+      conversation: {
+        id: convo.id,
+        content,
+        timestamp: convo.timestamp,
+        type: (type as string) || "other",
+      },
+    });
+
+    if (resolved) {
+      autoResolvedReminders = {
+        count: resolved.resolvedIds.length,
+        ids: resolved.resolvedIds,
+        source: resolved.source,
+      };
+    }
+  } catch (error) {
+    console.error("Auto reminder resolution failed:", error);
+  }
 
   if (!skipAutoReminder) {
     try {
@@ -103,5 +131,6 @@ export async function POST(req: Request) {
   return NextResponse.json({
     ...convo,
     autoReminder,
+    autoResolvedReminders,
   });
 }
