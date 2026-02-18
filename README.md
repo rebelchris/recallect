@@ -158,6 +158,39 @@ Prefer Tailscale over public port forwarding. Keep this app private; it has no b
 - Install Tailscale on Mac mini and your other device.
 - Open `http://<mac-mini-tailscale-ip>:3000`.
 
+## Manual reminder backfill for past conversations
+
+You can manually run auto-reminder generation over existing conversations:
+
+Dry run (default behavior, no DB writes):
+
+```bash
+curl -X POST http://localhost:3000/api/reminders/backfill \
+  -H "Content-Type: application/json" \
+  -d '{"limit":200}'
+```
+
+Actually create reminders:
+
+```bash
+curl -X POST http://localhost:3000/api/reminders/backfill \
+  -H "Content-Type: application/json" \
+  -d '{"dryRun":false,"limit":200}'
+```
+
+Optional filters:
+
+- `contactId`: only process one contact.
+- `fromTimestamp` / `toTimestamp`: ISO timestamps to limit the date window.
+
+Example with filters:
+
+```bash
+curl -X POST http://localhost:3000/api/reminders/backfill \
+  -H "Content-Type: application/json" \
+  -d '{"dryRun":false,"contactId":"<contact-id>","fromTimestamp":"2025-01-01T00:00:00.000Z"}'
+```
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
