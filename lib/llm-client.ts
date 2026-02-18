@@ -1,3 +1,5 @@
+import { completeSimple, type Context, type Message, type Model } from "@mariozechner/pi-ai";
+
 type ChatRole = "system" | "user" | "assistant";
 
 interface ChatMessage {
@@ -12,14 +14,20 @@ interface LlmConfig {
   model: string;
   baseUrl: string;
   apiKey?: string;
-  chatPath: string;
   timeoutMs: number;
   temperature: number;
+  maxTokens: number;
   extraHeaders: Record<string, string>;
 }
 
 function normalizeBaseUrl(value: string): string {
   return value.replace(/\/+$/, "");
+}
+
+function toPiOpenAiBaseUrl(provider: LlmProvider, baseUrl: string): string {
+  if (provider !== "ollama") return baseUrl;
+  if (/\/v1$/i.test(baseUrl)) return baseUrl;
+  return `${baseUrl}/v1`;
 }
 
 function parseProvider(value: string | undefined): LlmProvider {
@@ -47,26 +55,6 @@ function parseExtraHeaders(value: string | undefined): Record<string, string> {
   }
 }
 
-function toStringContent(content: unknown): string | null {
-  if (typeof content === "string") {
-    return content;
-  }
-
-  if (Array.isArray(content)) {
-    const parts = content
-      .map((part) => {
-        if (!part || typeof part !== "object") return "";
-        const text = (part as { text?: unknown }).text;
-        return typeof text === "string" ? text : "";
-      })
-      .filter(Boolean);
-
-    return parts.length > 0 ? parts.join("\n") : null;
-  }
-
-  return null;
-}
-
 function parseStructuredJson<T>(value: string): T | null {
   try {
     return JSON.parse(value) as T;
@@ -84,24 +72,6 @@ function parseStructuredJson<T>(value: string): T | null {
   }
 }
 
-async function fetchWithTimeout(
-  url: string,
-  init: RequestInit,
-  timeoutMs: number
-): Promise<Response> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    return await fetch(url, {
-      ...init,
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
 function getLlmConfig(): LlmConfig | null {
   const model = process.env.REMINDER_LLM_MODEL?.trim();
   if (!model) return null;
@@ -115,12 +85,10 @@ function getLlmConfig(): LlmConfig | null {
     process.env.REMINDER_LLM_BASE_URL?.trim() || defaultBaseUrl
   );
 
-  const defaultPath =
-    provider === "ollama" ? "/api/chat" : "/chat/completions";
-  const chatPath = process.env.REMINDER_LLM_CHAT_PATH?.trim() || defaultPath;
   const apiKey = process.env.REMINDER_LLM_API_KEY?.trim();
   const timeoutMs = Number(process.env.REMINDER_LLM_TIMEOUT_MS || "12000");
   const temperature = Number(process.env.REMINDER_LLM_TEMPERATURE || "0.2");
+  const maxTokens = Number(process.env.REMINDER_LLM_MAX_TOKENS || "512");
   const extraHeaders = parseExtraHeaders(process.env.REMINDER_LLM_HEADERS_JSON);
 
   return {
@@ -128,120 +96,126 @@ function getLlmConfig(): LlmConfig | null {
     model,
     baseUrl,
     apiKey: apiKey || undefined,
-    chatPath,
     timeoutMs: Number.isFinite(timeoutMs) ? timeoutMs : 12000,
     temperature: Number.isFinite(temperature) ? temperature : 0.2,
+    maxTokens: Number.isFinite(maxTokens) ? maxTokens : 512,
     extraHeaders,
   };
 }
 
-function joinUrl(baseUrl: string, path: string): string {
-  if (path.startsWith("http://") || path.startsWith("https://")) {
-    return path;
-  }
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  return `${baseUrl}${normalizedPath}`;
-}
+function toPiContext(messages: ChatMessage[]): Context {
+  const now = Date.now();
+  const systemPrompt = messages
+    .filter((message) => message.role === "system")
+    .map((message) => message.content)
+    .join("\n\n")
+    .trim();
 
-async function runOpenAiCompatible<T>(
-  config: LlmConfig,
-  messages: ChatMessage[]
-): Promise<T | null> {
-  const url = joinUrl(config.baseUrl, config.chatPath);
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-    ...config.extraHeaders,
-  };
+  const piMessages: Message[] = [];
 
-  if (config.apiKey) {
-    headers.Authorization = `Bearer ${config.apiKey}`;
-  }
+  for (let i = 0; i < messages.length; i += 1) {
+    const message = messages[i];
+    const timestamp = now + i;
 
-  const basePayload = {
-    model: config.model,
-    messages,
-    temperature: config.temperature,
-  };
+    if (message.role === "system") continue;
 
-  const payloads: Array<Record<string, unknown>> = [
-    {
-      ...basePayload,
-      response_format: { type: "json_object" },
-    },
-    basePayload,
-  ];
-
-  for (const payload of payloads) {
-    try {
-      const response = await fetchWithTimeout(
-        url,
-        {
-          method: "POST",
-          headers,
-          body: JSON.stringify(payload),
+    if (message.role === "assistant") {
+      piMessages.push({
+        role: "assistant",
+        content: [{ type: "text", text: message.content }],
+        api: "openai-completions",
+        provider: "openai",
+        model: "context",
+        usage: {
+          input: 0,
+          output: 0,
+          cacheRead: 0,
+          cacheWrite: 0,
+          totalTokens: 0,
+          cost: {
+            input: 0,
+            output: 0,
+            cacheRead: 0,
+            cacheWrite: 0,
+            total: 0,
+          },
         },
-        config.timeoutMs
-      );
-
-      if (!response.ok) {
-        continue;
-      }
-
-      const data = (await response.json()) as {
-        choices?: Array<{ message?: { content?: unknown } }>;
-      };
-      const raw = toStringContent(data.choices?.[0]?.message?.content);
-      if (!raw) continue;
-
-      const parsed = parseStructuredJson<T>(raw);
-      if (parsed) return parsed;
-    } catch {
+        stopReason: "stop",
+        timestamp,
+      });
       continue;
     }
+
+    piMessages.push({
+      role: "user",
+      content: message.content,
+      timestamp,
+    });
   }
 
-  return null;
+  // Guard against invalid empty context.
+  if (piMessages.length === 0) {
+    piMessages.push({
+      role: "user",
+      content: "{}",
+      timestamp: now,
+    });
+  }
+
+  return {
+    ...(systemPrompt && { systemPrompt }),
+    messages: piMessages,
+  };
 }
 
-async function runOllama<T>(
+function buildPiModel(config: LlmConfig): Model<"openai-completions"> {
+  return {
+    id: config.model,
+    name: config.model,
+    api: "openai-completions",
+    provider: config.provider,
+    baseUrl: toPiOpenAiBaseUrl(config.provider, config.baseUrl),
+    reasoning: false,
+    input: ["text"],
+    cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+    contextWindow: 128000,
+    maxTokens: config.maxTokens,
+    headers:
+      Object.keys(config.extraHeaders).length > 0 ? config.extraHeaders : undefined,
+  };
+}
+
+async function runWithPiAi<T>(
   config: LlmConfig,
   messages: ChatMessage[]
 ): Promise<T | null> {
-  const url = joinUrl(config.baseUrl, config.chatPath);
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-    ...config.extraHeaders,
-  };
+  const model = buildPiModel(config);
+  const context = toPiContext(messages);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), config.timeoutMs);
 
-  const response = await fetchWithTimeout(
-    url,
-    {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        model: config.model,
-        messages,
-        stream: false,
-        format: "json",
-        options: {
-          temperature: config.temperature,
-        },
-      }),
-    },
-    config.timeoutMs
-  );
+  try {
+    const response = await completeSimple(model, context, {
+      apiKey: config.apiKey,
+      temperature: config.temperature,
+      maxTokens: config.maxTokens,
+      headers: config.extraHeaders,
+      signal: controller.signal,
+    });
 
-  if (!response.ok) {
+    const raw = response.content
+      .filter((block) => block.type === "text")
+      .map((block) => block.text)
+      .join("\n")
+      .trim();
+
+    if (!raw) return null;
+    return parseStructuredJson<T>(raw);
+  } catch {
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
-
-  const data = (await response.json()) as {
-    message?: { content?: unknown };
-  };
-  const raw = toStringContent(data.message?.content);
-  if (!raw) return null;
-
-  return parseStructuredJson<T>(raw);
 }
 
 export async function generateStructuredOutput<T>(
@@ -251,11 +225,7 @@ export async function generateStructuredOutput<T>(
   if (!config) return null;
 
   try {
-    if (config.provider === "ollama") {
-      return await runOllama<T>(config, messages);
-    }
-
-    return await runOpenAiCompatible<T>(config, messages);
+    return await runWithPiAi<T>(config, messages);
   } catch {
     return null;
   }

@@ -32,7 +32,6 @@ WHATSAPP_AUTO_INIT=true
 TELEGRAM_STANDUP_TIME=08:00
 REMINDER_LLM_PROVIDER=openai-compatible
 REMINDER_LLM_BASE_URL=https://api.openai.com/v1
-REMINDER_LLM_CHAT_PATH=/chat/completions
 REMINDER_LLM_MODEL=gpt-4.1-mini
 REMINDER_LLM_API_KEY=your_api_key
 # Optional: {"HTTP-Referer":"https://your-app.example","X-Title":"Recallect"}
@@ -49,12 +48,13 @@ GOOGLE_CLIENT_SECRET=your_google_oauth_client_secret
 # Optional tuning
 # AUTO_REMINDER_MIN_CONFIDENCE=0.72
 # AUTO_REMINDER_RESOLUTION_MIN_CONFIDENCE=0.72
+# REMINDER_LLM_MAX_TOKENS=512
 ```
 
 - `TELEGRAM_BOT_TOKEN` enables Telegram auto-connect on server boot.
 - `WHATSAPP_AUTO_INIT=true` makes the server auto-start WhatsApp on boot (session is reused from `data/.wwebjs_auth` after first QR scan).
 - `TELEGRAM_STANDUP_TIME` sets local daily standup send time in `HH:MM` (24h).
-- `REMINDER_LLM_*` configures auto-generated reminder suggestions. `openai-compatible` works with most hosted/local providers that expose a Chat Completions API.
+- `REMINDER_LLM_*` configures auto-generated reminder suggestions via `@mariozechner/pi-ai` and supports multiple providers, including OpenAI-compatible endpoints such as Ollama/vLLM.
 - If no `REMINDER_LLM_MODEL` is set, reminders still use deterministic follow-up rules.
 - New conversations can auto-resolve older pending reminders for the same contact when completion intent is detected (LLM-first with conservative rule fallback).
 - `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` enable Google Contacts birthday import.
