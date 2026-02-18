@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/drizzle";
 import { reminders, conversations } from "@/db/schema";
-import { eq, and, gte, desc } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
+import { createReminderIfMissing } from "@/lib/reminders";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -54,22 +55,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const [reminder] = await db
-    .insert(reminders)
-    .values({
-      contactId,
-      conversationId,
-      remindAt: new Date(remindAt).toISOString(),
-    })
-    .returning();
-
-  const result = await db.query.reminders.findFirst({
-    where: eq(reminders.id, reminder.id),
-    with: {
-      contact: true,
-      conversation: true,
-    },
+  const { created, reminder } = await createReminderIfMissing({
+    contactId,
+    conversationId,
+    remindAt,
   });
 
-  return NextResponse.json(result, { status: 201 });
+  return NextResponse.json(reminder, { status: created ? 201 : 200 });
 }

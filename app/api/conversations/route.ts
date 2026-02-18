@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db/drizzle";
 import { conversations, contacts } from "@/db/schema";
 import { eq, desc } from "drizzle-orm";
+import { suggestAutoReminder } from "@/lib/auto-reminders";
+import { createReminderIfMissing } from "@/lib/reminders";
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
@@ -21,11 +23,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(req: Request) {
   const body = await req.json();
-  const { contactId, content, timestamp, type } = body as {
+  const { contactId, content, timestamp, type, skipAutoReminder } = body as {
     contactId: string;
     content: string;
     timestamp?: string;
     type?: string;
+    skipAutoReminder?: boolean;
   };
 
   if (!contactId || !content) {
@@ -56,5 +59,49 @@ export async function POST(req: Request) {
     .set({ updatedAt: new Date().toISOString() })
     .where(eq(contacts.id, contactId));
 
-  return NextResponse.json(convo);
+  let autoReminder: {
+    created: boolean;
+    remindAt: string;
+    reason: string;
+    confidence: number;
+    source: "rules" | "llm";
+  } | null = null;
+
+  if (!skipAutoReminder) {
+    try {
+      const contactName = contact.lastName
+        ? `${contact.name} ${contact.lastName}`
+        : contact.name;
+      const suggestion = await suggestAutoReminder({
+        content,
+        contactName,
+        contactFrequency: contact.contactFrequency,
+        interactionType: type,
+        conversationTimestamp: convo.timestamp,
+      });
+
+      if (suggestion?.shouldCreate && suggestion.remindAt) {
+        const createdReminder = await createReminderIfMissing({
+          contactId,
+          conversationId: convo.id,
+          remindAt: suggestion.remindAt,
+        });
+
+        autoReminder = {
+          created: createdReminder.created,
+          remindAt: createdReminder.reminder.remindAt,
+          reason: suggestion.reason,
+          confidence: suggestion.confidence,
+          source: suggestion.source,
+        };
+      }
+    } catch (error) {
+      console.error("Auto reminder generation failed:", error);
+    }
+  }
+
+  return NextResponse.json({
+    ...convo,
+    autoReminder,
+  });
 }

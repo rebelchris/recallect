@@ -147,7 +147,12 @@ export default function QuickAddModal({
       const res = await fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contactId: selectedPerson.id, content: content.trim(), type }),
+        body: JSON.stringify({
+          contactId: selectedPerson.id,
+          content: content.trim(),
+          type,
+          skipAutoReminder: reminderEnabled,
+        }),
       });
       if (res.ok) {
         const conversation = await res.json();

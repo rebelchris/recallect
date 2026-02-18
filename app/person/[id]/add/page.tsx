@@ -118,7 +118,12 @@ export default function AddConversation() {
       const response = await fetch("/api/conversations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contactId: id, content, type }),
+        body: JSON.stringify({
+          contactId: id,
+          content,
+          type,
+          skipAutoReminder: setReminder,
+        }),
       });
 
       if (!response.ok) {
