@@ -1,4 +1,5 @@
 import type { ContactFrequency, InteractionType, ImportantDateLabel } from "@/lib/constants";
+import type { RelationshipHealth } from "@/lib/relationship-health";
 
 export interface Group {
   id: string;
@@ -38,6 +39,7 @@ export interface Contact {
     conversations: number;
   };
   lastConversationDate?: string | null;
+  relationshipHealth?: RelationshipHealth;
 }
 
 export interface Conversation {

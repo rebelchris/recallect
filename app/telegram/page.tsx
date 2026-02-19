@@ -14,15 +14,22 @@ export default function TelegramPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchStatus();
-  }, []);
+    let cancelled = false;
 
-  async function fetchStatus() {
-    const res = await fetch("/api/telegram/status");
-    const data = await res.json();
-    setStatus(data.status);
-    setBotUsername(data.botUsername);
-  }
+    async function loadStatus() {
+      const res = await fetch("/api/telegram/status");
+      const data = await res.json();
+      if (cancelled) return;
+      setStatus(data.status);
+      setBotUsername(data.botUsername);
+    }
+
+    void loadStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   async function handleConnect() {
     setConnecting(true);

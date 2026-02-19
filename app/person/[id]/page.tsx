@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -13,10 +13,12 @@ import {
   Clock,
   MessageCircle,
   Plus,
+  HeartPulse,
 } from "lucide-react";
-import { relativeTimeFrom } from "@/lib/utils";
+import { firstChars, relativeTimeFrom } from "@/lib/utils";
 import { CONTACT_FREQUENCIES, IMPORTANT_DATE_LABELS } from "@/lib/constants";
 import type { Contact, Conversation, Reminder, ImportantDate } from "@/types";
+import { calculateRelationshipHealth } from "@/lib/relationship-health";
 import ReminderItem from "@/components/ReminderItem";
 import ConversationItem from "@/components/ConversationItem";
 import EditConversationModal from "@/components/EditConversationModal";
@@ -25,6 +27,7 @@ import GroupBadge from "@/components/GroupBadge";
 
 export default function PersonDetail() {
   const params = useParams();
+  const contactId = params.id as string;
   const [contact, setContact] = useState<Contact | null>(null);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -37,10 +40,10 @@ export default function PersonDetail() {
   const [quickInfoSaving, setQuickInfoSaving] = useState(false);
   const [quickInfoMessage, setQuickInfoMessage] = useState("");
 
-  const fetchPersonData = async () => {
+  const fetchPersonData = useCallback(async () => {
     try {
       setLoading(true);
-      const res = await fetch(`/api/contacts/${params.id}`);
+      const res = await fetch(`/api/contacts/${contactId}`);
       if (!res.ok) {
         if (res.status === 404) return;
         throw new Error("Failed to fetch contact");
@@ -49,8 +52,8 @@ export default function PersonDetail() {
       setContact(data);
 
       const [remindersRes, conversationsRes] = await Promise.all([
-        fetch(`/api/reminders?contactId=${params.id}&status=PENDING`),
-        fetch(`/api/conversations?contactId=${params.id}`),
+        fetch(`/api/reminders?contactId=${contactId}&status=PENDING`),
+        fetch(`/api/conversations?contactId=${contactId}`),
       ]);
 
       if (remindersRes.ok) setReminders(await remindersRes.json());
@@ -60,17 +63,21 @@ export default function PersonDetail() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [contactId]);
 
   useEffect(() => {
-    fetchPersonData();
-  }, [params.id]);
+    void fetchPersonData();
+  }, [fetchPersonData]);
 
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") fetchPersonData();
+      if (document.visibilityState === "visible") {
+        void fetchPersonData();
+      }
     };
-    const handleFocus = () => fetchPersonData();
+    const handleFocus = () => {
+      void fetchPersonData();
+    };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
     window.addEventListener("focus", handleFocus);
@@ -78,7 +85,7 @@ export default function PersonDetail() {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       window.removeEventListener("focus", handleFocus);
     };
-  }, [params.id]);
+  }, [fetchPersonData]);
 
   useEffect(() => {
     if (!contact) return;
@@ -87,6 +94,16 @@ export default function PersonDetail() {
     const birthday = contact.importantDates?.find((d) => d.label === "birthday");
     setQuickBirthday(birthday?.date?.slice(0, 10) || "");
   }, [contact]);
+
+  const relationshipHealth = useMemo(
+    () =>
+      calculateRelationshipHealth({
+        contactFrequency: contact?.contactFrequency,
+        lastConversationAt: conversations[0]?.timestamp ?? null,
+        pendingReminders: reminders,
+      }),
+    [contact?.contactFrequency, conversations, reminders]
+  );
 
   if (loading) {
     return (
@@ -106,6 +123,9 @@ export default function PersonDetail() {
 
   const displayName = [contact.name, contact.lastName].filter(Boolean).join(" ");
   const birthday = contact.importantDates?.find((d) => d.label === "birthday");
+  const lastInteraction = conversations[0];
+  const nextReminder = reminders[0];
+  const upcomingDate = getNextImportantDate(contact.importantDates || []);
 
   async function saveQuickInfo(e: React.FormEvent) {
     e.preventDefault();
@@ -236,8 +256,126 @@ export default function PersonDetail() {
                 />
               </>
             )}
+            <span className="text-border">·</span>
+            <span className="inline-flex items-center gap-1">
+              <HeartPulse size={14} />
+              <span className={relationshipHealth.status === "strong"
+                ? "text-success"
+                : relationshipHealth.status === "steady"
+                  ? "text-warning"
+                  : "text-danger"}
+              >
+                Health {relationshipHealth.score}
+              </span>
+            </span>
           </div>
         </header>
+
+        {/* Contact Brief */}
+        <section className="mb-6 rounded-xl border border-border bg-[linear-gradient(140deg,rgba(15,23,42,0.05),rgba(15,23,42,0)_70%)] p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-sm font-medium">Brief</p>
+            <Link
+              href={`/person/${contact.id}/add`}
+              className="rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              Log interaction
+            </Link>
+          </div>
+          <div className="space-y-3">
+            <div className="rounded-lg border border-border/80 bg-background/80 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Last interaction
+              </p>
+              {lastInteraction ? (
+                <>
+                  <p className="mt-1 text-sm font-medium text-foreground">
+                    {relativeTimeFrom(lastInteraction.timestamp)}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {firstChars(lastInteraction.content, 110)}
+                  </p>
+                </>
+              ) : (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  No interactions logged yet.
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-lg border border-border/80 bg-background/80 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Open reminders
+              </p>
+              {reminders.length > 0 ? (
+                <>
+                  <p className="mt-1 text-sm font-medium text-foreground">
+                    {reminders.length} open {reminders.length === 1 ? "reminder" : "reminders"}
+                  </p>
+                  {nextReminder && (
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      Next due {formatDueDate(nextReminder.remindAt)}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="mt-1 text-sm text-muted-foreground">No open reminders.</p>
+              )}
+            </div>
+
+            <div className="rounded-lg border border-border/80 bg-background/80 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Upcoming date
+              </p>
+              {upcomingDate ? (
+                <>
+                  <p className="mt-1 text-sm font-medium text-foreground">
+                    {IMPORTANT_DATE_LABELS[upcomingDate.label] || upcomingDate.label}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {upcomingDate.dateLabel} · {upcomingDate.relativeLabel}
+                  </p>
+                </>
+              ) : (
+                <p className="mt-1 text-sm text-muted-foreground">
+                  No upcoming important date.
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Relationship Health */}
+        <section className="mb-6 rounded-xl border border-border bg-card p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <p className="text-sm font-medium">Relationship health</p>
+            <span
+              className={`rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                relationshipHealth.status === "strong"
+                  ? "border-success bg-success-muted text-success"
+                  : relationshipHealth.status === "steady"
+                    ? "border-warning bg-warning-muted text-warning"
+                    : "border-danger bg-danger-muted text-danger"
+              }`}
+            >
+              {relationshipHealth.status}
+            </span>
+          </div>
+          <div className="mb-3 flex items-end justify-between">
+            <p className="text-3xl font-semibold tracking-tight">
+              {relationshipHealth.score}
+              <span className="ml-1 text-base font-medium text-muted-foreground">/100</span>
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {relationshipHealth.pendingReminderCount} open · {relationshipHealth.overdueReminderCount} overdue
+            </p>
+          </div>
+          <div className="space-y-2">
+            <HealthMetric label="Freshness" value={relationshipHealth.freshness} />
+            <HealthMetric label="Consistency" value={relationshipHealth.consistency} />
+            <HealthMetric label="Follow-through" value={relationshipHealth.followThrough} />
+          </div>
+        </section>
 
         {/* Basic Info */}
         <section className="mb-6 rounded-xl border border-border bg-card p-4">
@@ -491,6 +629,100 @@ export default function PersonDetail() {
         onUpdate={fetchPersonData}
       />
     </>
+  );
+}
+
+type NextImportantDate = {
+  label: ImportantDate["label"];
+  dateLabel: string;
+  relativeLabel: string;
+  daysUntil: number;
+};
+
+function getNextImportantDate(dates: ImportantDate[]): NextImportantDate | null {
+  const now = new Date();
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate()
+  ).getTime();
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const upcoming: NextImportantDate[] = [];
+
+  for (const date of dates) {
+    if (!date.date) continue;
+
+    let occurrence: Date;
+
+    if (date.recurring) {
+      const [, month, day] = date.date.split("-").map(Number);
+      occurrence = new Date(now.getFullYear(), month - 1, day);
+      if (occurrence.getTime() < startOfToday) {
+        occurrence = new Date(now.getFullYear() + 1, month - 1, day);
+      }
+    } else {
+      occurrence = new Date(`${date.date}T00:00:00`);
+      if (occurrence.getTime() < startOfToday) continue;
+    }
+
+    const daysUntil = Math.floor((occurrence.getTime() - startOfToday) / msPerDay);
+    const relativeLabel =
+      daysUntil === 0
+        ? "today"
+        : daysUntil === 1
+          ? "tomorrow"
+          : `in ${daysUntil} days`;
+
+    upcoming.push({
+      label: date.label,
+      dateLabel: occurrence.toLocaleDateString(undefined, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+      }),
+      relativeLabel,
+      daysUntil,
+    });
+  }
+
+  if (upcoming.length === 0) return null;
+  upcoming.sort((a, b) => a.daysUntil - b.daysUntil);
+  return upcoming[0];
+}
+
+function formatDueDate(value: string): string {
+  const now = new Date();
+  const target = new Date(value);
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const dayDelta = Math.floor(
+    (target.getTime() - new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime()) /
+      msPerDay
+  );
+
+  if (dayDelta === 0) return "today";
+  if (dayDelta === 1) return "tomorrow";
+  if (dayDelta < 0) return `${Math.abs(dayDelta)}d ago`;
+
+  return `in ${dayDelta}d`;
+}
+
+function HealthMetric({ label, value }: { label: string; value: number }) {
+  const toneClass =
+    value >= 80 ? "bg-success" : value >= 60 ? "bg-warning" : "bg-danger";
+
+  return (
+    <div>
+      <div className="mb-1 flex items-center justify-between text-xs text-muted-foreground">
+        <span>{label}</span>
+        <span>{value}</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-muted">
+        <div
+          className={`h-full rounded-full ${toneClass}`}
+          style={{ width: `${value}%` }}
+        />
+      </div>
+    </div>
   );
 }
 

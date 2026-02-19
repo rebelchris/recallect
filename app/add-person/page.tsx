@@ -3,8 +3,8 @@
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp, Plus, X } from "lucide-react";
-import type { Group, ImportantDate } from "@/types";
-import { CONTACT_FREQUENCIES, type ContactFrequency, IMPORTANT_DATE_LABELS, type ImportantDateLabel } from "@/lib/constants";
+import type { Group } from "@/types";
+import { CONTACT_FREQUENCIES, IMPORTANT_DATE_LABELS, type ImportantDateLabel } from "@/lib/constants";
 
 export default function AddPersonPage() {
   const [name, setName] = useState("");

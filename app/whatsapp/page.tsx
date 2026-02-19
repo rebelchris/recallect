@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import {
   MessageCircle,
   Wifi,
@@ -32,16 +33,6 @@ export default function WhatsAppPage() {
   const [disconnecting, setDisconnecting] = useState(false);
   const eventSourceRef = useRef<EventSource | null>(null);
 
-  useEffect(() => {
-    fetchStatus();
-  }, []);
-
-  useEffect(() => {
-    if (status === "ready") {
-      fetchChats();
-    }
-  }, [status]);
-
   async function fetchStatus() {
     const res = await fetch("/api/whatsapp/status");
     const data = await res.json();
@@ -49,6 +40,56 @@ export default function WhatsAppPage() {
     setQrDataUrl(data.qrDataUrl);
     setConnectedPhone(data.connectedPhone);
   }
+
+  async function fetchChats() {
+    setLoadingChats(true);
+    const res = await fetch("/api/whatsapp/chats");
+    if (res.ok) {
+      setChats(await res.json());
+    }
+    setLoadingChats(false);
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadStatus() {
+      const res = await fetch("/api/whatsapp/status");
+      const data = await res.json();
+      if (cancelled) return;
+      setStatus(data.status);
+      setQrDataUrl(data.qrDataUrl);
+      setConnectedPhone(data.connectedPhone);
+    }
+
+    void loadStatus();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (status !== "ready") return;
+
+    let cancelled = false;
+
+    async function loadChats() {
+      setLoadingChats(true);
+      const res = await fetch("/api/whatsapp/chats");
+      if (cancelled) return;
+      if (res.ok) {
+        setChats(await res.json());
+      }
+      setLoadingChats(false);
+    }
+
+    void loadChats();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [status]);
 
   async function handleConnect() {
     setConnecting(true);
@@ -73,7 +114,7 @@ export default function WhatsAppPage() {
         if (data.status === "ready") {
           setQrDataUrl(null);
           setConnecting(false);
-          fetchStatus();
+          void fetchStatus();
           es.close();
         }
         if (data.status === "disconnected") {
@@ -100,15 +141,6 @@ export default function WhatsAppPage() {
     if (eventSourceRef.current) {
       eventSourceRef.current.close();
     }
-  }
-
-  async function fetchChats() {
-    setLoadingChats(true);
-    const res = await fetch("/api/whatsapp/chats");
-    if (res.ok) {
-      setChats(await res.json());
-    }
-    setLoadingChats(false);
   }
 
   useEffect(() => {
@@ -192,11 +224,12 @@ export default function WhatsAppPage() {
             {qrDataUrl ? (
               <>
                 <div className="mb-3 inline-block rounded-xl bg-white p-3">
-                  <img
+                  <Image
                     src={qrDataUrl}
                     alt="WhatsApp QR Code"
                     width={256}
                     height={256}
+                    unoptimized
                   />
                 </div>
                 <p className="text-sm text-muted-foreground">

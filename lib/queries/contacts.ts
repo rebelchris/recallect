@@ -1,12 +1,7 @@
 import { db } from "@/db/drizzle";
-import {
-  contacts,
-  conversations,
-  contactsToGroups,
-  groups,
-  importantDates,
-} from "@/db/schema";
-import { eq, desc, like, or, sql } from "drizzle-orm";
+import { contacts, conversations } from "@/db/schema";
+import { eq, desc, like, or } from "drizzle-orm";
+import { calculateRelationshipHealth } from "@/lib/relationship-health";
 
 export async function getContacts(options?: {
   groupId?: string;
@@ -17,6 +12,9 @@ export async function getContacts(options?: {
       conversations: {
         orderBy: [desc(conversations.timestamp)],
         limit: 1,
+      },
+      reminders: {
+        where: (reminders, { eq }) => eq(reminders.status, "PENDING"),
       },
       contactsToGroups: {
         with: { group: true },
@@ -50,6 +48,11 @@ export async function getContacts(options?: {
     ...c,
     groups: c.contactsToGroups.map((ctg) => ctg.group),
     lastConversationDate: c.conversations[0]?.timestamp ?? null,
+    relationshipHealth: calculateRelationshipHealth({
+      contactFrequency: c.contactFrequency,
+      lastConversationAt: c.conversations[0]?.timestamp ?? null,
+      pendingReminders: c.reminders,
+    }),
     _count: { conversations: 0 }, // Will be filled below
   }));
 }
@@ -58,6 +61,13 @@ export async function getContact(id: string) {
   const result = await db.query.contacts.findFirst({
     where: eq(contacts.id, id),
     with: {
+      conversations: {
+        orderBy: [desc(conversations.timestamp)],
+        limit: 1,
+      },
+      reminders: {
+        where: (reminders, { eq }) => eq(reminders.status, "PENDING"),
+      },
       contactsToGroups: {
         with: { group: true },
       },
@@ -70,6 +80,12 @@ export async function getContact(id: string) {
   return {
     ...result,
     groups: result.contactsToGroups.map((ctg) => ctg.group),
+    lastConversationDate: result.conversations[0]?.timestamp ?? null,
+    relationshipHealth: calculateRelationshipHealth({
+      contactFrequency: result.contactFrequency,
+      lastConversationAt: result.conversations[0]?.timestamp ?? null,
+      pendingReminders: result.reminders,
+    }),
   };
 }
 

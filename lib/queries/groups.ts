@@ -1,6 +1,6 @@
 import { db } from "@/db/drizzle";
-import { groups, contactsToGroups } from "@/db/schema";
-import { eq, sql } from "drizzle-orm";
+import { groups } from "@/db/schema";
+import { eq } from "drizzle-orm";
 
 export async function getGroups() {
   const result = await db.query.groups.findMany({

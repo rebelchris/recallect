@@ -1,8 +1,10 @@
 import PullToRefresh from "@/components/PullToRefresh";
 import Link from "next/link";
+import { cookies } from "next/headers";
 import { firstChars, relativeTimeFrom } from "@/lib/utils";
 import { CHARACTER_LIMITS } from "@/lib/conversationHelpers";
 import { CONTACT_FREQUENCIES, IMPORTANT_DATE_LABELS } from "@/lib/constants";
+import { parseDashboardPreferences } from "@/lib/preferences";
 import GroupFilter from "./GroupFilter";
 import SearchBar from "./SearchBar";
 import { getContacts } from "@/lib/queries/contacts";
@@ -11,6 +13,9 @@ import {
   getStaleContacts,
   getUpcomingDates,
   getRecentInteractions,
+  getTodayFocus,
+  getSegmentQueues,
+  type TodayFocusItem,
 } from "@/lib/queries/dashboard";
 import { db } from "@/db/drizzle";
 import { reminders } from "@/db/schema";
@@ -18,7 +23,16 @@ import { eq, gte, and } from "drizzle-orm";
 import FrequencyIndicator from "@/components/FrequencyIndicator";
 import GroupBadge from "@/components/GroupBadge";
 import InteractionTypeIcon from "@/components/InteractionTypeIcon";
-import { Gift, Clock, MessageCircle, Users } from "lucide-react";
+import {
+  Gift,
+  Clock,
+  MessageCircle,
+  Users,
+  Sparkles,
+  HeartPulse,
+  Layers3,
+  BarChart3,
+} from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -43,8 +57,21 @@ export default async function Home({
   searchParams: Promise<{ groupId?: string; search?: string }>;
 }) {
   const { groupId, search } = await searchParams;
+  const cookieStore = await cookies();
+  const preferences = parseDashboardPreferences(
+    cookieStore.get("recallect_prefs")?.value
+  );
 
-  const [groups, contacts, staleContacts, upcomingDates, recentInteractions, upcomingReminders] =
+  const [
+    groups,
+    contacts,
+    staleContacts,
+    upcomingDates,
+    recentInteractions,
+    upcomingReminders,
+    todayFocus,
+    segmentQueues,
+  ] =
     await Promise.all([
       getGroups(),
       getContacts({ groupId, search }),
@@ -52,6 +79,14 @@ export default async function Home({
       getUpcomingDates(30),
       getRecentInteractions(8),
       getUpcomingReminders(),
+      getTodayFocus(preferences.focusLimit, {
+        cooldownDays: preferences.cooldownDays,
+        includeLowPriority: preferences.includeLowPriority,
+      }),
+      getSegmentQueues(preferences.segmentLimit, {
+        cooldownDays: preferences.cooldownDays,
+        includeLowPriority: preferences.includeLowPriority,
+      }),
     ]);
 
   const showDashboardSections = !search && (!groupId || groupId === "ALL");
@@ -64,6 +99,31 @@ export default async function Home({
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-semibold tracking-tight">Recallect</h1>
             <div className="flex items-center gap-0.5">
+              <Link
+                href="/settings"
+                className="rounded-full p-2.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                title="Settings"
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-5 w-5"
+                >
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.08a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.08a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.08a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+              </Link>
+              <Link
+                href="/weekly-review"
+                className="rounded-full p-2.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                title="Weekly review"
+              >
+                <BarChart3 size={20} />
+              </Link>
               <Link
                 href="/reminders"
                 className="rounded-full p-2.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
@@ -102,6 +162,120 @@ export default async function Home({
         {/* Dashboard Sections */}
         {showDashboardSections && (
           <div className="space-y-8">
+            {/* Today Focus */}
+            {todayFocus.length > 0 && (
+              <section>
+                <SectionHeader icon={Sparkles} title="Today Focus" />
+                <div className="space-y-2">
+                  {todayFocus.map((item) => (
+                    <article
+                      key={item.contactId}
+                      className="rounded-xl border border-border bg-[linear-gradient(130deg,rgba(15,23,42,0.04),rgba(15,23,42,0.0)_65%)] p-4"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="font-medium">
+                            {item.contactName}
+                            {item.contactLastName ? ` ${item.contactLastName}` : ""}
+                          </p>
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {item.primaryReason}
+                          </p>
+                          {item.secondaryReason && (
+                            <p className="mt-0.5 text-xs text-muted-foreground/80">
+                              {item.secondaryReason}
+                            </p>
+                          )}
+                        </div>
+                        <PriorityPill priority={item.priority} />
+                      </div>
+                      <div className="mt-3 flex items-center gap-2">
+                        <Link
+                          href={`/person/${item.contactId}/add`}
+                          className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                        >
+                          {item.actionLabel}
+                        </Link>
+                        <Link
+                          href={`/person/${item.contactId}`}
+                          className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        >
+                          View
+                        </Link>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Segment Queues */}
+            {segmentQueues.length > 0 && (
+              <section>
+                <SectionHeader icon={Layers3} title="Segment Queues" />
+                <div className="space-y-3">
+                  {segmentQueues.map((queue) => (
+                    <div
+                      key={queue.key}
+                      className="rounded-xl border border-border bg-card p-4"
+                    >
+                      <div className="mb-3 flex items-center justify-between gap-2">
+                        <p className="text-sm font-semibold">{queue.label}</p>
+                        {queue.groupId ? (
+                          <Link
+                            href={`/?groupId=${queue.groupId}`}
+                            className="rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                          >
+                            View group
+                          </Link>
+                        ) : null}
+                      </div>
+                      <div className="space-y-2">
+                        {queue.items.map((item) => (
+                          <div
+                            key={`${queue.key}-${item.contactId}`}
+                            className="rounded-lg border border-border/80 bg-muted/20 p-3"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <div className="min-w-0">
+                                <p className="font-medium">
+                                  {item.contactName}
+                                  {item.contactLastName ? ` ${item.contactLastName}` : ""}
+                                </p>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                  {item.reason}
+                                </p>
+                              </div>
+                              <div className="flex flex-col items-end gap-1">
+                                <PriorityPill priority={item.priority} />
+                                <span className="text-xs text-muted-foreground">
+                                  Health {item.healthScore}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="mt-3 flex items-center gap-2">
+                              <Link
+                                href={`/person/${item.contactId}/add`}
+                                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+                              >
+                                {item.actionLabel}
+                              </Link>
+                              <Link
+                                href={`/person/${item.contactId}`}
+                                className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                              >
+                                View
+                              </Link>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
             {/* Upcoming Dates */}
             {upcomingDates.length > 0 && (
               <section>
@@ -287,6 +461,9 @@ export default async function Home({
                             lastConversationDate={c.lastConversationDate ?? null}
                           />
                         )}
+                        {c.relationshipHealth && (
+                          <HealthPill score={c.relationshipHealth.score} status={c.relationshipHealth.status} />
+                        )}
                       </div>
                       {c.groups && c.groups.length > 0 && (
                         <div className="flex gap-1 flex-shrink-0">
@@ -344,6 +521,41 @@ function StatusDot({ status }: { status: "red" | "yellow" | "green" }) {
     green: "bg-success",
   };
   return <div className={`h-2 w-2 rounded-full ${colors[status]}`} />;
+}
+
+function PriorityPill({ priority }: { priority: TodayFocusItem["priority"] }) {
+  const styles = {
+    high: "border-danger bg-danger-muted text-danger",
+    medium: "border-warning bg-warning-muted text-warning",
+    low: "border-success bg-success-muted text-success",
+  };
+
+  return (
+    <span className={`rounded-full border px-2 py-0.5 text-[11px] font-semibold ${styles[priority]}`}>
+      {priority.toUpperCase()}
+    </span>
+  );
+}
+
+function HealthPill({
+  score,
+  status,
+}: {
+  score: number;
+  status: "strong" | "steady" | "at-risk";
+}) {
+  const styles = {
+    strong: "border-success bg-success-muted text-success",
+    steady: "border-warning bg-warning-muted text-warning",
+    "at-risk": "border-danger bg-danger-muted text-danger",
+  };
+
+  return (
+    <span className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold ${styles[status]}`}>
+      <HeartPulse size={10} />
+      {score}
+    </span>
+  );
 }
 
 function EmptyState({ isSearching, isFiltered }: { isSearching: boolean; isFiltered: boolean }) {

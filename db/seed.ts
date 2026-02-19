@@ -35,12 +35,10 @@ function seed() {
     .all();
   const work = workArr[0];
 
-  const communityArr = db
+  db
     .insert(schema.groups)
     .values({ name: "Community", color: "#96CEB4" })
-    .returning()
-    .all();
-  const community = communityArr[0];
+    .run();
 
   console.log("Groups created");
 

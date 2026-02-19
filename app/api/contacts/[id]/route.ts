@@ -47,7 +47,7 @@ export async function PATCH(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const [updated] = await db
+  await db
     .update(contacts)
     .set({
       ...(name !== undefined && { name }),
@@ -65,8 +65,7 @@ export async function PATCH(
       ...(socialLinks !== undefined && { socialLinks: socialLinks || null }),
       updatedAt: new Date().toISOString(),
     })
-    .where(eq(contacts.id, id))
-    .returning();
+    .where(eq(contacts.id, id));
 
   // Handle group reassignment
   if (groupIds !== undefined && Array.isArray(groupIds)) {

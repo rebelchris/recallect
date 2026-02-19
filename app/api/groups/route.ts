@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/db/drizzle";
-import { groups, contactsToGroups } from "@/db/schema";
+import { groups } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { getGroups } from "@/lib/queries/groups";
 

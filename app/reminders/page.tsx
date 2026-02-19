@@ -2,13 +2,20 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ArrowLeft, Check, CheckCircle2, Clock, RotateCcw } from "lucide-react";
-import { useSearchParams } from "next/navigation";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Check,
+  CheckCircle2,
+  Clock,
+  RotateCcw,
+  Link2,
+} from "lucide-react";
 import type { Reminder } from "@/types";
 import { firstChars, relativeTimeFrom } from "@/lib/utils";
 import { CHARACTER_LIMITS } from "@/lib/conversationHelpers";
 
-type ReminderTab = "upcoming" | "overdue" | "done";
+type ReminderTab = "upcoming" | "overdue" | "open-loops" | "done";
 
 interface GoogleIntegrationStatus {
   configured: boolean;
@@ -16,6 +23,10 @@ interface GoogleIntegrationStatus {
   accountEmail: string | null;
   expiresAt: string | null;
 }
+
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+const PROMISE_PATTERN =
+  /\b(send|share|intro|introduce|follow[\s-]?up|get back|check in|review|proposal|quote|contract|plan)\b/i;
 
 function formatReminderDate(value: string): string {
   const date = new Date(value);
@@ -34,8 +45,27 @@ function fullName(name: string | undefined, lastName: string | null | undefined)
   return lastName ? `${name} ${lastName}` : name;
 }
 
+function getOpenLoopReason(reminder: Reminder): string {
+  const overdueDays = Math.floor(
+    (Date.now() - new Date(reminder.remindAt).getTime()) / MS_PER_DAY
+  );
+  const hasPromiseSignal = PROMISE_PATTERN.test(
+    reminder.conversation?.content || ""
+  );
+
+  if (overdueDays >= 2 && hasPromiseSignal) {
+    return `Promise follow-up · ${overdueDays}d overdue`;
+  }
+  if (overdueDays >= 2) {
+    return `${overdueDays}d overdue`;
+  }
+  if (hasPromiseSignal) {
+    return "Pending promise follow-up";
+  }
+  return "Open loop";
+}
+
 export default function RemindersPage() {
-  const searchParams = useSearchParams();
   const [pendingReminders, setPendingReminders] = useState<Reminder[]>([]);
   const [dismissedReminders, setDismissedReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,7 +113,7 @@ export default function RemindersPage() {
   }, []);
 
   useEffect(() => {
-    const state = searchParams.get("google");
+    const state = new URLSearchParams(window.location.search).get("google");
     if (!state) return;
 
     const map: Record<string, string> = {
@@ -98,7 +128,7 @@ export default function RemindersPage() {
     if (message) {
       setGoogleMessage(message);
     }
-  }, [searchParams]);
+  }, []);
 
   const { overdue, upcoming, done } = useMemo(() => {
     const now = Date.now();
@@ -125,6 +155,25 @@ export default function RemindersPage() {
       done: doneItems,
     };
   }, [dismissedReminders, pendingReminders]);
+
+  const openLoops = useMemo(() => {
+    const now = Date.now();
+
+    return pendingReminders
+      .filter((reminder) => {
+        const overdueDays = Math.floor(
+          (now - new Date(reminder.remindAt).getTime()) / MS_PER_DAY
+        );
+        const hasPromiseSignal = PROMISE_PATTERN.test(
+          reminder.conversation?.content || ""
+        );
+
+        return overdueDays >= 2 || hasPromiseSignal;
+      })
+      .sort(
+        (a, b) => new Date(a.remindAt).getTime() - new Date(b.remindAt).getTime()
+      );
+  }, [pendingReminders]);
 
   async function updateStatus(id: string, status: "PENDING" | "DISMISSED") {
     setUpdatingId(id);
@@ -215,7 +264,13 @@ export default function RemindersPage() {
   }
 
   const items =
-    activeTab === "upcoming" ? upcoming : activeTab === "overdue" ? overdue : done;
+    activeTab === "upcoming"
+      ? upcoming
+      : activeTab === "overdue"
+        ? overdue
+        : activeTab === "open-loops"
+          ? openLoops
+          : done;
 
   return (
     <main className="mx-auto max-w-lg px-5 pb-28 pt-6">
@@ -294,7 +349,7 @@ export default function RemindersPage() {
         )}
       </section>
 
-      <div className="mb-5 grid grid-cols-3 gap-2">
+      <div className="mb-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
         <TabButton
           icon={Clock}
           label={`Upcoming (${upcoming.length})`}
@@ -306,6 +361,12 @@ export default function RemindersPage() {
           label={`Overdue (${overdue.length})`}
           active={activeTab === "overdue"}
           onClick={() => setActiveTab("overdue")}
+        />
+        <TabButton
+          icon={Link2}
+          label={`Open loops (${openLoops.length})`}
+          active={activeTab === "open-loops"}
+          onClick={() => setActiveTab("open-loops")}
         />
         <TabButton
           icon={CheckCircle2}
@@ -327,6 +388,7 @@ export default function RemindersPage() {
         <div className="rounded-xl border border-border bg-card p-5 text-sm text-muted-foreground">
           {activeTab === "upcoming" && "No upcoming reminders."}
           {activeTab === "overdue" && "No overdue reminders."}
+          {activeTab === "open-loops" && "No open loops right now."}
           {activeTab === "done" && "No completed reminders yet."}
         </div>
       ) : (
@@ -370,6 +432,11 @@ export default function RemindersPage() {
                         </span>
                       )}
                     </p>
+                    {activeTab === "open-loops" && (
+                      <p className="mt-1 text-xs font-medium text-warning">
+                        {getOpenLoopReason(reminder)}
+                      </p>
+                    )}
                   </div>
 
                   {reminder.status === "PENDING" ? (

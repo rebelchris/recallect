@@ -1,17 +1,31 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { calculateQuickReminderDate } from "@/lib/conversationHelpers";
 import InteractionTypeSelector from "@/components/InteractionTypeSelector";
 import type { InteractionType } from "@/lib/constants";
 
+type FollowUpTemplate = {
+  id: string;
+  title: string;
+  message: string;
+  reminderDays: number;
+};
+
+type SmartReminderPreset = {
+  label: string;
+  days: number;
+};
+
 export default function AddConversation() {
-  const { id } = useParams();
+  const params = useParams();
+  const id = params.id as string;
   const router = useRouter();
   const [content, setContent] = useState("");
   const [type, setType] = useState<InteractionType>("other");
   const [saving, setSaving] = useState(false);
+  const [contactFirstName, setContactFirstName] = useState("");
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const shouldStopRef = useRef(false);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -20,6 +34,49 @@ export default function AddConversation() {
   const [showTextFallback, setShowTextFallback] = useState(false);
   const [setReminder, setSetReminder] = useState(false);
   const [reminderDate, setReminderDate] = useState("");
+  const [copiedTemplateId, setCopiedTemplateId] = useState<string | null>(null);
+  const copiedTemplateTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const followUpTemplates = useMemo(
+    () => buildFollowUpTemplates({ type, content, contactFirstName }),
+    [type, content, contactFirstName]
+  );
+
+  const smartReminderPresets = useMemo(
+    () => buildSmartReminderPresets({ type, content }),
+    [type, content]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadContact() {
+      try {
+        const response = await fetch(`/api/contacts/${id}`);
+        if (!response.ok) return;
+        const contact = await response.json();
+        if (cancelled) return;
+        setContactFirstName(extractFirstName(contact.name || ""));
+      } catch (error) {
+        console.error("Failed to fetch contact for assistant context:", error);
+      }
+    }
+
+    void loadContact();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+      if (copiedTemplateTimeoutRef.current) {
+        clearTimeout(copiedTemplateTimeoutRef.current);
+      }
+    };
+  }, []);
 
   function startListening() {
     const SpeechRecognitionAPI =
@@ -112,6 +169,28 @@ export default function AddConversation() {
     setReminderDate(calculateQuickReminderDate(days));
   }
 
+  function applyReminderPreset(days: number) {
+    setSetReminder(true);
+    setQuickReminder(days);
+  }
+
+  async function copyFollowUpTemplate(template: FollowUpTemplate) {
+    try {
+      await navigator.clipboard.writeText(template.message);
+      setCopiedTemplateId(template.id);
+      if (copiedTemplateTimeoutRef.current) {
+        clearTimeout(copiedTemplateTimeoutRef.current);
+      }
+      copiedTemplateTimeoutRef.current = setTimeout(() => {
+        setCopiedTemplateId((current) =>
+          current === template.id ? null : current
+        );
+      }, 1800);
+    } catch {
+      setVoiceError("Could not copy follow-up text.");
+    }
+  }
+
   async function onSave() {
     setSaving(true);
     try {
@@ -172,6 +251,49 @@ export default function AddConversation() {
         className="h-52 w-full resize-none rounded-xl border border-border bg-input p-4 text-base text-foreground outline-none transition-colors focus:border-secondary focus:bg-card focus:shadow-sm placeholder:text-muted-foreground"
       />
 
+      {/* Post-interaction assistant */}
+      <section className="mt-5 rounded-xl border border-border bg-card p-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <p className="text-sm font-semibold text-foreground">
+            Post-interaction assistant
+          </p>
+          <p className="text-xs text-muted-foreground">
+            Quick follow-up drafts
+          </p>
+        </div>
+        <div className="space-y-2">
+          {followUpTemplates.map((template) => (
+            <article
+              key={template.id}
+              className="rounded-lg border border-border bg-muted/40 p-3"
+            >
+              <p className="text-sm font-medium text-foreground">
+                {template.title}
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {template.message}
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => copyFollowUpTemplate(template)}
+                  className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  {copiedTemplateId === template.id ? "Copied" : "Copy text"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyReminderPreset(template.reminderDays)}
+                  className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+                >
+                  Remind me in {template.reminderDays}d
+                </button>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
       {/* Reminder Section */}
       <div className="mt-5 rounded-xl border border-border bg-muted p-4">
         <label className="flex cursor-pointer items-center gap-2.5">
@@ -188,6 +310,20 @@ export default function AddConversation() {
 
         {setReminder && (
           <div className="mt-4 space-y-3">
+            {smartReminderPresets.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {smartReminderPresets.map((preset) => (
+                  <button
+                    key={preset.label}
+                    type="button"
+                    onClick={() => setQuickReminder(preset.days)}
+                    className="rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:border-secondary hover:bg-accent"
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            )}
             <div className="flex flex-wrap gap-2">
               {[
                 { label: "In 1 week", days: 7 },
@@ -197,6 +333,7 @@ export default function AddConversation() {
               ].map(({ label, days }) => (
                 <button
                   key={days}
+                  type="button"
                   onClick={() => setQuickReminder(days)}
                   className="rounded-lg border border-border bg-card px-3.5 py-2 text-sm font-medium text-foreground transition-colors hover:border-secondary hover:bg-accent"
                 >
@@ -288,4 +425,114 @@ export default function AddConversation() {
       </div>
     </main>
   );
+}
+
+function buildFollowUpTemplates({
+  type,
+  content,
+  contactFirstName,
+}: {
+  type: InteractionType;
+  content: string;
+  contactFirstName: string;
+}): FollowUpTemplate[] {
+  const name = contactFirstName ? ` ${contactFirstName}` : "";
+  const interactionLabel =
+    type === "call"
+      ? "call"
+      : type === "email"
+        ? "email exchange"
+        : type === "meeting"
+          ? "meeting"
+          : type === "coffee" || type === "dinner" || type === "hangout"
+            ? "catch-up"
+            : "chat";
+
+  const topic = summarizeConversation(content);
+
+  return [
+    {
+      id: "quick-recap",
+      title: "Quick recap",
+      message: `Great ${interactionLabel} today${name}. ${
+        topic
+          ? `Good talking about ${topic}.`
+          : "Thanks again for the time."
+      }`,
+      reminderDays: 2,
+    },
+    {
+      id: "next-step",
+      title: "Next-step nudge",
+      message: `Following up on our ${interactionLabel}${name}. Want to lock one next step this week?`,
+      reminderDays: 7,
+    },
+  ];
+}
+
+function buildSmartReminderPresets({
+  type,
+  content,
+}: {
+  type: InteractionType;
+  content: string;
+}): SmartReminderPreset[] {
+  const presets: SmartReminderPreset[] = [];
+  const lower = content.toLowerCase();
+
+  if (
+    type === "meeting" ||
+    type === "coffee" ||
+    type === "dinner" ||
+    type === "hangout"
+  ) {
+    presets.push(
+      { label: "Send recap tomorrow", days: 1 },
+      { label: "Check in next week", days: 7 }
+    );
+  } else if (type === "call" || type === "text" || type === "email" || type === "whatsapp") {
+    presets.push(
+      { label: "Follow up in 2 days", days: 2 },
+      { label: "Check in next week", days: 7 }
+    );
+  } else {
+    presets.push(
+      { label: "Follow up in 3 days", days: 3 },
+      { label: "Check in next week", days: 7 }
+    );
+  }
+
+  if (/\bintro|introduc/.test(lower)) {
+    presets.unshift({ label: "Check intro in 5 days", days: 5 });
+  }
+
+  if (/\bproposal|quote|pricing|contract/.test(lower)) {
+    presets.unshift({ label: "Nudge in 2 days", days: 2 });
+  }
+
+  const deduped: SmartReminderPreset[] = [];
+  for (const preset of presets) {
+    if (!deduped.some((item) => item.label === preset.label && item.days === preset.days)) {
+      deduped.push(preset);
+    }
+  }
+
+  return deduped.slice(0, 3);
+}
+
+function summarizeConversation(content: string): string {
+  const cleaned = content.replace(/\s+/g, " ").trim();
+  if (!cleaned) return "";
+
+  const snippet = cleaned.slice(0, 80);
+  if (snippet.length < cleaned.length) {
+    return `${snippet}...`;
+  }
+  return snippet;
+}
+
+function extractFirstName(name: string): string {
+  const cleaned = name.trim();
+  if (!cleaned) return "";
+  return cleaned.split(" ")[0];
 }

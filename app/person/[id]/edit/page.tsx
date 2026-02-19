@@ -6,7 +6,6 @@ import { ChevronDown, ChevronUp, Plus, X, Trash2 } from "lucide-react";
 import type { Group, Contact, ImportantDate } from "@/types";
 import {
   CONTACT_FREQUENCIES,
-  type ContactFrequency,
   IMPORTANT_DATE_LABELS,
   type ImportantDateLabel,
 } from "@/lib/constants";
